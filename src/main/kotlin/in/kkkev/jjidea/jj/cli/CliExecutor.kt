@@ -91,7 +91,17 @@ internal fun gitInitArgs(colocate: Boolean) =
 internal fun describeArgs(description: Description, revision: Revision) =
     JjInvocation(REVERSIBLE, "describe", "-r", revision, "--message=${description.actual}")
 
-internal fun abandonArgs(revision: Revision) = JjInvocation(REVERSIBLE, "abandon", "-r", revision)
+/** Build the argument list for `jj abandon`: one `-r` per revision, so all are abandoned in a single operation. */
+internal fun abandonArgs(revisions: List<Revision>) = JjInvocation(
+    REVERSIBLE,
+    buildList {
+        add("abandon")
+        revisions.forEach {
+            add("-r")
+            add(it.toString())
+        }
+    }
+)
 
 internal fun editArgs(revision: Revision) = JjInvocation(REVERSIBLE, "edit", revision)
 
@@ -762,7 +772,8 @@ class CliExecutor(
         edit: Boolean
     ): CommandExecutor.CommandResult = execute(root, newArgs(description, parentRevisions, destinationMode, edit))
 
-    override fun abandon(revision: Revision): CommandExecutor.CommandResult = execute(root, abandonArgs(revision))
+    override fun abandon(revisions: List<Revision>): CommandExecutor.CommandResult =
+        execute(root, abandonArgs(revisions))
 
     override fun edit(revision: Revision): CommandExecutor.CommandResult = execute(root, editArgs(revision))
 

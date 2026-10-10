@@ -86,9 +86,8 @@ object JujutsuLogContextMenuActions {
         // Offer "Describe" for mutable changes
         add(ManagedActions["Jujutsu.DescribeChangeToolbar"])
 
-        // Can abandon any mutable change including working copy
-        // TODO Allow abandon on multiple if all entries are immutable
-        add(abandonChangeAction(project, entry?.takeIf { !it.immutable }))
+        // Can abandon any mutable change including working copy; multi-select needs all mutable, same repo
+        add(abandonChangesAction(project, entries))
         add(resolveConflictsAction(project, entry))
         add(openMergeToolAction(project, entry))
 

@@ -224,11 +224,14 @@ interface CommandExecutor {
     ): CommandResult
 
     /**
-     * Abandon a change (remove it from the log)
-     * @param revision The revision to abandon
+     * Abandon one or more changes (remove them from the log) in a single operation
+     * @param revisions The revisions to abandon
      * @return Command result
      */
-    fun abandon(revision: Revision): CommandResult
+    fun abandon(revisions: List<Revision>): CommandResult
+
+    /** Abandon a single change. */
+    fun abandon(revision: Revision): CommandResult = abandon(listOf(revision))
 
     /**
      * Edit a change (move working copy to specified revision)

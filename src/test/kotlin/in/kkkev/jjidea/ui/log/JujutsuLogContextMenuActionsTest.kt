@@ -1,5 +1,7 @@
 package `in`.kkkev.jjidea.ui.log
 
+import `in`.kkkev.jjidea.actions.change.abandonSelectAfter
+import `in`.kkkev.jjidea.actions.change.abandonableEntries
 import `in`.kkkev.jjidea.actions.change.editableEntry
 import `in`.kkkev.jjidea.actions.change.squashableEntry
 import `in`.kkkev.jjidea.jj.*
@@ -22,7 +24,7 @@ import org.junit.jupiter.api.Test
  * The logic tested here corresponds to the filtering in createActionGroup:
  * - [in.kkkev.jjidea.actions.change.editableEntry] for edit
  * - `entry?.takeUnless { it.immutable }` for describe
- * - `entry?.takeIf { !it.immutable }` for abandon
+ * - `abandonableEntries` for abandon
  * - `entries.map { it.repo }.toSet().singleOrNull()` for new change
  */
 class JujutsuLogContextMenuActionsTest {
@@ -270,32 +272,63 @@ class JujutsuLogContextMenuActionsTest {
     @Nested
     inner class `Abandon action availability` {
         @Test
-        fun `immutable entry filtered out`() {
-            val entry = createEntry("abc123", immutable = true)
-
-            val abandonTarget = entry.takeIf { !it.immutable }
-
-            abandonTarget.shouldBeNull()
+        fun `immutable entry is not abandonable`() {
+            abandonableEntries(listOf(createEntry("abc123", immutable = true))).shouldBeNull()
         }
 
         @Test
-        fun `mutable entry passes through`() {
-            val entry = createEntry("abc123", immutable = false)
-
-            val abandonTarget = entry.takeIf { !it.immutable }
-
-            abandonTarget.shouldNotBeNull()
+        fun `mutable entry is abandonable`() {
+            abandonableEntries(listOf(createEntry("abc123"))).shouldNotBeNull()
         }
 
         @Test
-        fun `working copy mutable entry passes through`() {
-            // Abandon should work on working copy
-            val entry = createEntry("abc123", isWorkingCopy = true, immutable = false)
+        fun `working copy mutable entry is abandonable`() {
+            abandonableEntries(listOf(createEntry("abc123", isWorkingCopy = true))).shouldNotBeNull()
+        }
 
-            val abandonTarget = entry.takeIf { !it.immutable }
+        @Test
+        fun `multiple mutable entries in one repo are abandonable`() {
+            abandonableEntries(listOf(createEntry("abc123"), createEntry("def456"))).shouldNotBeNull()
+        }
 
-            abandonTarget.shouldNotBeNull()
-            abandonTarget.isWorkingCopy shouldBe true
+        @Test
+        fun `one immutable entry among several disables abandon`() {
+            abandonableEntries(listOf(createEntry("abc123"), createEntry("def456", immutable = true))).shouldBeNull()
+        }
+
+        @Test
+        fun `entries spanning two repos are not abandonable`() {
+            abandonableEntries(listOf(createEntry("abc123"), createEntry("def456", repo = repo2))).shouldBeNull()
+        }
+
+        @Test
+        fun `empty selection is not abandonable`() {
+            abandonableEntries(emptyList()).shouldBeNull()
+        }
+    }
+
+    @Nested
+    inner class `Abandon select-after` {
+        @Test
+        fun `working copy in the set selects working copy`() {
+            abandonSelectAfter(
+                listOf(createEntry("aaa", parentIds = listOf("ppp")), createEntry("bbb", isWorkingCopy = true))
+            ).shouldBeNull()
+        }
+
+        @Test
+        fun `chain selects the surviving parent not an abandoned one`() {
+            // c -> b -> a ; abandoning c and b leaves a
+            val result = abandonSelectAfter(
+                listOf(createEntry("ccc", parentIds = listOf("bbb")), createEntry("bbb", parentIds = listOf("aaa")))
+            )
+
+            result shouldBe ChangeId("aaa", "aa", null)
+        }
+
+        @Test
+        fun `no parents falls back to working copy`() {
+            abandonSelectAfter(listOf(createEntry("aaa"))).shouldBeNull()
         }
     }
 

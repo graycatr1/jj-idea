@@ -1021,6 +1021,12 @@ non-paged behavior is perceptible.
       bookmark asks for confirmation naming the bookmark and warning it will be deleted;
       cancelling keeps both the change and the bookmark. A change with only a remote-tracking
       bookmark (`name@remote`) abandons without prompting
+- [ ] jj-idea-thk: multi-select 3 mutable changes (Ctrl/Cmd-click) → right-click → **Abandon Changes**
+      asks once, listing counts ("2 with file modifications", ...) and the union of local bookmarks;
+      confirming removes all three and selects a surviving parent (the working copy if `@` was among
+      them); a single **Undo** restores all three. Two empty, undescribed, unbookmarked changes abandon
+      without a prompt; selecting 10 or more always prompts. A selection that includes an immutable change,
+      or spans two repos, shows **Abandon** disabled
 - [ ] **Duplicate Change** action creates an identical copy in place, with a new change ID and the same description; `@` does not move
 - [ ] **Duplicate Onto...** opens a dialog to pick a destination and placement (onto/after/before), then creates the copy there
 - [ ] jj-idea-1uz0 (GitHub #125): with ~20 rows selected, **Rebase…** and **Duplicate Onto…** show the source list scrolling within about 5 rows, with the destination picker still visible (the source list helper is shared with Squash Into…)

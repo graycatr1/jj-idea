@@ -145,7 +145,7 @@ class StubCommandExecutor(private val stub: JjStub) : CommandExecutor {
     ): CommandExecutor.CommandResult =
         toResult(stub.run(*newArgs(description, parentRevisions, destinationMode, edit).args.toTypedArray()))
 
-    override fun abandon(revision: Revision): CommandExecutor.CommandResult =
+    override fun abandon(revisions: List<Revision>): CommandExecutor.CommandResult =
         TODO("Not needed for integration tests")
 
     override fun opLog(limit: Int, template: String?): CommandExecutor.CommandResult =

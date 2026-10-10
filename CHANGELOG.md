@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Abandon Changes**: select several changes in the log and abandon them together from the right-click menu. It is available when every selected change is mutable and in the same repository, runs as a single operation (one Undo restores all of them), and asks once, summarising what would be lost, including any local bookmarks that will be deleted. Selecting 10 or more changes always asks first.
+
 ## [0.9.1] - 2026-10-10
 
 ## [0.9.0] - 2026-10-10

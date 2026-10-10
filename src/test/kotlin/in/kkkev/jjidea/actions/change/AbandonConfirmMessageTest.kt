@@ -97,4 +97,44 @@ class AbandonConfirmMessageTest {
         message shouldContain "a description"
         message shouldContain "bookmarks feature, other"
     }
+
+    @Test
+    fun `several clean entries need no confirmation`() {
+        abandonConfirmMessage(listOf(entry(), entry())).shouldBeNull()
+    }
+
+    @Test
+    fun `ten clean entries are always confirmed`() {
+        val message = abandonConfirmMessage(List(10) { entry() })
+
+        message shouldNotBe null
+        message!! shouldContain "10"
+    }
+
+    @Test
+    fun `several entries aggregate counts`() {
+        val message = abandonConfirmMessage(
+            listOf(
+                entry(isEmpty = false, description = "One"),
+                entry(isEmpty = false),
+                entry(description = "Three")
+            )
+        )!!
+
+        message shouldContain "3 changes"
+        message shouldContain "2 with file modifications"
+        message shouldContain "2 with descriptions"
+    }
+
+    @Test
+    fun `bookmarks are unioned and deduplicated across entries, skipping remote and deleted`() {
+        val message = abandonConfirmMessage(
+            listOf(
+                entry(bookmarks = listOf(Bookmark("feature"), Bookmark("main@origin"))),
+                entry(bookmarks = listOf(Bookmark("feature"), Bookmark("other"), Bookmark("gone", deleted = true)))
+            )
+        )!!
+
+        message shouldContain "bookmarks feature, other"
+    }
 }
