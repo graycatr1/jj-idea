@@ -56,6 +56,12 @@ internal fun opRevertArgs(id: OperationId, what: Set<CommandExecutor.OpRevertSco
     }
 )
 
+/**
+ * [IRREVERSIBLE]: restore is itself an operation, but undoing a restore from a balloon would
+ * invite balloon-on-balloon chains - the operation log UI is the place to step back from it.
+ */
+internal fun opRestoreArgs(id: OperationId) = JjInvocation(IRREVERSIBLE, "op", "restore", id.toString())
+
 internal fun statusArgs() = JjInvocation(READ_ONLY, "status")
 
 internal fun diffArgs(filePath: String) = JjInvocation(READ_ONLY, "diff", filePath.toFileset())
@@ -719,6 +725,8 @@ class CliExecutor(
 
     override fun opRevert(id: OperationId, what: Set<CommandExecutor.OpRevertScope>) =
         execute(root, opRevertArgs(id, what))
+
+    override fun opRestore(id: OperationId) = execute(root, opRestoreArgs(id))
 
     override fun status() = execute(root, statusArgs())
 

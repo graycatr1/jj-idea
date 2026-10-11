@@ -151,6 +151,8 @@ class StubCommandExecutor(private val stub: JjStub) : CommandExecutor {
     override fun opLog(limit: Int, template: String?): CommandExecutor.CommandResult =
         TODO("Not needed for integration tests")
 
+    override fun opRestore(id: OperationId): CommandExecutor.CommandResult = TODO("Not needed for integration tests")
+
     override fun opRevert(
         id: OperationId,
         what: Set<CommandExecutor.OpRevertScope>

@@ -33,7 +33,9 @@ enum class PreviewFeature(override val bit: Int) : PreviewFeatureSpec {
     /** bit 0 retired (was DRAG_AND_DROP, graduated in jj-idea-jxii) - never reuse */
     /** bit 1 retired (was PAGED_LOG_LOAD, graduated in jj-idea-2570.4) - never reuse */
     /** bit 2 retired (was CONFLICT_GUTTER, graduated in jj-idea-n6fz.4) - never reuse */
-    ;
+
+    /** The Operations tab (`jj op log` browser with per-entry revert/restore) - jj-idea-aii0. */
+    OPERATION_LOG(3);
 
     override val id = name.snakeToCamelCase()
     override val displayName get() = JujutsuBundle.message("preview.$id.name")

@@ -672,6 +672,13 @@ interface CommandExecutor {
     fun opRevert(id: OperationId, what: Set<OpRevertScope> = setOf(OpRevertScope.REPO)): CommandResult
 
     /**
+     * `jj op restore <id>`. A reset to the state at [id]: every operation after it has its effect
+     * discarded, including operations from other processes. Only ever exposed as a deliberate,
+     * confirmed secondary action in the operation log UI - see docs/design/undo-support-roadmap.md.
+     */
+    fun opRestore(id: OperationId): CommandResult
+
+    /**
      * An executor that resolves [CommandResult.Success.Reversible.operation] for commands whose
      * [in.kkkev.jjidea.jj.cli.Reversibility] is `REVERSIBLE`, by injecting a per-invocation token
      * and matching it back against the operation log - see

@@ -3,6 +3,7 @@ package `in`.kkkev.jjidea.jj.cli
 import `in`.kkkev.jjidea.jj.OperationEntry
 import `in`.kkkev.jjidea.jj.OperationId
 import io.kotest.matchers.shouldBe
+import kotlinx.datetime.Instant
 import org.junit.jupiter.api.Test
 
 /**
@@ -21,7 +22,7 @@ class UndoIdentificationTest {
         id = OperationId(id),
         parents = emptyList(),
         description = "",
-        time = "",
+        time = Instant.fromEpochSeconds(0),
         user = "",
         isSnapshot = isSnapshot,
         isRoot = false,

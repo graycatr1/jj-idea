@@ -15,7 +15,6 @@ import `in`.kkkev.jjidea.jj.JjAvailabilityStatus
 import `in`.kkkev.jjidea.jj.JjExecutableFinder
 import `in`.kkkev.jjidea.jj.JjVersion
 import `in`.kkkev.jjidea.jj.JujutsuRepository
-import `in`.kkkev.jjidea.preview.PreviewFeature
 import `in`.kkkev.jjidea.preview.TestPreviewFeature
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
@@ -91,8 +90,8 @@ class JujutsuConfigurablePanelTest {
 
     @Test
     fun `the preview group is absent while nothing is in preview`() {
-        PreviewFeature.entries shouldBe emptyList()
-        val panel = JujutsuConfigurable(project.get()).createPanel()
+        val configurable = JujutsuConfigurable(project.get()).apply { previewFeatures = emptyList() }
+        val panel = configurable.createPanel()
 
         UIUtil.findComponentsOfType(panel, JBTextField::class.java)
             .none { it.name == JujutsuConfigurable.PREVIEW_CODE_FIELD_NAME } shouldBe true

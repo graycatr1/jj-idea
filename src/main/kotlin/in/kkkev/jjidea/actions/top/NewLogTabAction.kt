@@ -17,9 +17,9 @@ import java.util.UUID
  * The tab can be renamed afterward via right-click → Rename….
  *
  * Placed in two locations via plugin.xml:
- *  - `LocalChangesView.TabActions` — standalone "+" in the VCS tool window tab strip (pure-JJ projects).
  *  - `Vcs.Log.ToolWindow.TabActions.DropDown` — always reachable in the Git "▼" dropdown when both
  *    Git and Jujutsu roots coexist.
+ *  - Via [NewTabGroup], which owns the standalone "+" in the VCS tool window tab strip (pure-JJ projects).
  */
 class NewLogTabAction : DumbAwareAction(
     JujutsuBundle.message("log.action.newtab"),

@@ -3562,11 +3562,11 @@ file), which no automated test can supply — see contributing.md § Manual regr
 
 #### Preview features (jj-idea-vpvz, jj-idea-0x06)
 
-- [ ] While nothing is in preview (currently the case: drag-and-drop, paged log loading and the
-      conflict gutter have all graduated), Settings has **no** Preview features group and no
-      Access code field. The steps below apply only once a feature is gated again; until
-      then the group's behaviour is covered by `JujutsuConfigurablePanelTest` with a test-only
-      feature
+- [ ] The Preview features group is shown whenever a feature is gated (currently **Operations
+      tab**, jj-idea-aii0). Once nothing is gated again (all graduated), Settings has **no**
+      Preview features group and no Access code field, and the group's behaviour is covered by
+      `JujutsuConfigurablePanelTest` with a test-only feature. The steps below assume a gated
+      feature exists
 
 - [ ] Open **Settings → Version Control → Jujutsu**: a **Preview features** group appears at the
       bottom of the panel, below **Support**, with only an "Access code:" field and a one-line
@@ -4038,6 +4038,50 @@ Requires the bundled Tasks plugin (Tools → Tasks & Contexts). Use a repo with 
 - [ ] Switch task, then check the Undo balloon reverts the switch
 - [ ] Multi-root project: the task applies to every jj root that has the bookmark
 - [ ] Project with no jj root: the branch options are hidden in the Open Task dialog
+
+### MT-OPLOG
+
+**Operations tab (`jj op log` browser, jj-idea-aii0) - preview feature `OPERATION_LOG`**
+
+**Code:** `ui/oplog/*`, `actions/undo/ShowOperationLogAction.kt`, `jj/cli/CliExecutor.kt` (`opRestoreArgs`), `preview/PreviewFeature.kt`
+**Also re-run:** MT-WORKINGCOPY (revert/restore invalidate repo state and the working copy); MT-LOG-REFRESH (the tab refreshes on the same funnel); MT-CTXMENU (VCS → Jujutsu submenu entry); MT-SETTINGS (Preview features group)
+
+Precondition: the feature is gated. Either enable it with `-Djjidea.preview.operationLog=true`
+(runIde / VM options) or enter an access code granting **Operations tab** under Settings →
+Version Control → Jujutsu → Preview features, tick it, Apply, and reopen the IDE. Use a repo with
+a few changes and a dirty working copy.
+
+- [ ] **Gating:** with no access code and no property, VCS → Jujutsu has **no** "Show Operation Log"
+      entry (hidden, not greyed out), Find Action does not offer it, and the "+" in the VCS tool
+      window tab strip still opens a new log tab directly with a single click (no menu)
+- [ ] With the feature enabled, the tab strip's "+" becomes a small menu offering **Open New Jujutsu
+      Log Tab** and **Show Operation Log**; both work
+- [ ] With the feature enabled, VCS → Jujutsu → **Show Operation Log** opens an **Operations** tab in
+      the VCS tool window; running it again re-selects the same tab rather than opening a second
+- [ ] Rows are newest first with Description, Command and Time columns (Time last, like the log);
+      the bottom row is the "(repository created)" root operation. Time reads "Today 14:05" /
+      "Yesterday 09:12" / a locale date exactly like the log's Date column, with the full absolute
+      time in its tooltip
+- [ ] **Snapshot toggle:** "snapshot working copy" rows are hidden by default; the toolbar
+      **Show Snapshot Operations** toggle reveals them, and the selected row stays selected
+- [ ] **Terminal operation appears:** run `jj describe -m "from terminal"` in a terminal; after the
+      repo refreshes (focus the IDE) the tab shows the new top row with its command; with the head
+      unchanged, Refresh does not reset the scroll position or selection
+- [ ] **Revert (primary):** select an older, non-root row, press **Revert This Operation** (toolbar and
+      right-click). Only that operation's effect is undone; later operations' effects remain; a new
+      row appears at the top; the log and Working Copy panel update
+- [ ] Revert and Restore are **disabled with a tooltip reason** on the root row and with nothing
+      selected; Restore is also disabled on the top (current) row
+- [ ] **Restore (secondary):** right-click shows Restore in its own section below a separator, labelled
+      "Restore Repository to This Point...". Choosing it shows a confirmation naming the operation
+      and how many later operations are discarded; **Cancel** changes nothing
+- [ ] Confirming Restore resets the repo to that point (`jj log` matches the state after that
+      operation), the tab gains a new top row, and the log/Working Copy panel refresh
+- [ ] Revert and Restore never raise an undo balloon
+- [ ] **Multi-root:** with two jj roots, a repo selector appears; switching it loads that repo's
+      operations and acts on that repo only. With one root there is no selector
+- [ ] Close the tab and reopen it: the list is rebuilt, no errors in idea.log
+- [ ] Disable the plugin dynamically (Settings → Plugins) with the tab open: the tab disappears
 
 ### MT-CROSS
 

@@ -37,6 +37,14 @@ class CliExecutorOpTest {
     }
 
     @Test
+    fun `op restore targets exactly the given operation and is irreversible`() {
+        val result = opRestoreArgs(OperationId("abc123"))
+
+        result.args shouldBe listOf("op", "restore", "abc123")
+        result.reversibility shouldBe Reversibility.IRREVERSIBLE
+    }
+
+    @Test
     fun `op revert with both scopes emits --what twice`() {
         val result = opRevertArgs(
             OperationId("abc123"),

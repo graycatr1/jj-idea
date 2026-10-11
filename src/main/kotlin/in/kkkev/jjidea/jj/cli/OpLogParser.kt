@@ -2,6 +2,7 @@ package `in`.kkkev.jjidea.jj.cli
 
 import `in`.kkkev.jjidea.jj.OperationEntry
 import `in`.kkkev.jjidea.jj.OperationId
+import kotlinx.datetime.Instant
 
 /**
  * Template for `jj op log`, NUL-separated per contributing.md's log-parsing convention -
@@ -16,7 +17,7 @@ import `in`.kkkev.jjidea.jj.OperationId
 internal const val OP_LOG_TEMPLATE = "id ++ \"\\0\" ++ " +
     "self.parents().map(|p| p.id()).join(\",\") ++ \"\\0\" ++ " +
     "description ++ \"\\0\" ++ " +
-    "time.start() ++ \"\\0\" ++ " +
+    "time.start().utc().format(\"%s\") ++ \"\\0\" ++ " +
     "user ++ \"\\0\" ++ " +
     "if(snapshot, \"1\", \"0\") ++ \"\\0\" ++ " +
     "if(root, \"1\", \"0\") ++ \"\\0\" ++ " +
@@ -85,7 +86,7 @@ internal fun parseOpLog(stdout: String): List<OperationEntry> {
             id = OperationId(id),
             parents = if (parentsRaw.isEmpty()) emptyList() else parentsRaw.split(",").map(::OperationId),
             description = fields[i + 2],
-            time = fields[i + 3],
+            time = Instant.fromEpochSeconds(fields[i + 3].toLongOrNull() ?: 0),
             user = fields[i + 4],
             isSnapshot = fields[i + 5] == "1",
             isRoot = fields[i + 6] == "1",

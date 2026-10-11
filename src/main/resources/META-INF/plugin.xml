@@ -175,6 +175,10 @@
          UndoLastOperationAction's KDoc. -->
     <action id="Jujutsu.UndoLastOperation" class="in.kkkev.jjidea.actions.undo.UndoLastOperationAction"/>
 
+    <!-- Stage 3 (jj-idea-aii0): the Operations tab. Preview-gated (PreviewFeature.OPERATION_LOG) -
+         the action hides itself unless the feature is enabled. -->
+    <action id="Jujutsu.ShowOperationLog" class="in.kkkev.jjidea.actions.undo.ShowOperationLogAction"/>
+
     <!-- Quick action to change the diff base for gutter markers/Annotate (jj-idea-g1io, GitHub #43),
          in addition to the permanent per-project/per-repo setting in Settings > Version Control > Jujutsu. -->
     <action id="Jujutsu.SetDiffBase" class="in.kkkev.jjidea.actions.diffbase.SetDiffbaseAction"/>
@@ -208,6 +212,7 @@
            popup="true">
       <reference ref="Jujutsu.OpenLogTab"/>
       <reference ref="Jujutsu.UndoLastOperation"/>
+      <reference ref="Jujutsu.ShowOperationLog"/>
       <reference ref="Jujutsu.SetDiffBase"/>
       <add-to-group group-id="VcsGlobalGroup" anchor="after" relative-to-action="Vcs.Specific"/>
     </group>
@@ -307,14 +312,19 @@
 
     <!--
       Open a new Jujutsu log tab with a default name and all repositories.
-      Appears as "+" in the tab strip (pure-JJ) and in Git's "▼" dropdown (mixed Git+JJ).
+      Appears in Git's "▼" dropdown (mixed Git+JJ); the tab-strip "+" is Jujutsu.NewTabGroup below.
     -->
     <action id="Jujutsu.NewLogTab"
             class="in.kkkev.jjidea.actions.top.NewLogTabAction">
-      <add-to-group group-id="LocalChangesView.TabActions"/>
       <add-to-group group-id="Vcs.Log.ToolWindow.TabActions.DropDown"
                     anchor="after" relative-to-action="Vcs.ShowConsoleTab"/>
     </action>
+
+    <!-- The "+" in the tab strip: plain "new log tab" normally, a New Log Tab / Show Operation Log
+         popup while the Operations tab preview feature (jj-idea-aii0) is enabled. -->
+    <group id="Jujutsu.NewTabGroup" class="in.kkkev.jjidea.actions.top.NewTabGroup" popup="true">
+      <add-to-group group-id="LocalChangesView.TabActions"/>
+    </group>
 
     <!-- Right-click "Rename…" for Jujutsu log tabs in the VCS tool window. -->
     <action id="Jujutsu.RenameLogTab"
