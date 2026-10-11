@@ -96,6 +96,9 @@ class JjStub(override val workDir: Path) : JjBackend {
         args.startsWith("git", "init") -> cmdGitInit()
         args.startsWith("git", "remote", "add") -> cmdGitRemoteAdd(args)
         args.startsWith("git", "remote", "list") -> cmdGitRemoteList()
+        args.startsWith("git", "remote", "remove") -> cmdGitRemoteRemove(args)
+        args.startsWith("git", "remote", "rename") -> cmdGitRemoteRename(args)
+        args.startsWith("git", "remote", "set-url") -> cmdGitRemoteSetUrl(args)
         else -> throw StubError("Unknown git subcommand: ${args.joinToString(" ")}")
     }
 
@@ -651,6 +654,30 @@ class JjStub(override val workDir: Path) : JjBackend {
         val positional = args.drop(3) // drop "git", "remote", "add"
         val name = positional.getOrNull(0) ?: throw StubError("git remote add requires a name")
         val url = positional.getOrNull(1) ?: throw StubError("git remote add requires a url")
+        if (name in remotes) throw StubError("Error: Git remote named '$name' already exists")
+        remotes[name] = url
+        return ok()
+    }
+
+    private fun cmdGitRemoteRemove(args: List<String>): JjBackend.Result {
+        val name = args.getOrNull(3) ?: throw StubError("git remote remove requires a name")
+        remotes.remove(name) ?: throw StubError("Error: No git remote named '$name'")
+        return ok()
+    }
+
+    private fun cmdGitRemoteRename(args: List<String>): JjBackend.Result {
+        val old = args.getOrNull(3) ?: throw StubError("git remote rename requires an old name")
+        val new = args.getOrNull(4) ?: throw StubError("git remote rename requires a new name")
+        if (old !in remotes) throw StubError("Error: No git remote named '$old'")
+        if (new in remotes) throw StubError("Error: Git remote named '$new' already exists")
+        remotes[new] = remotes.remove(old)!!
+        return ok()
+    }
+
+    private fun cmdGitRemoteSetUrl(args: List<String>): JjBackend.Result {
+        val name = args.getOrNull(3) ?: throw StubError("git remote set-url requires a name")
+        val url = args.getOrNull(4) ?: throw StubError("git remote set-url requires a url")
+        if (name !in remotes) throw StubError("Error: No git remote named '$name'")
         remotes[name] = url
         return ok()
     }

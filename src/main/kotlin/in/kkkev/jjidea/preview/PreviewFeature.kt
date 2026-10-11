@@ -35,7 +35,10 @@ enum class PreviewFeature(override val bit: Int) : PreviewFeatureSpec {
     /** bit 2 retired (was CONFLICT_GUTTER, graduated in jj-idea-n6fz.4) - never reuse */
 
     /** The Operations tab (`jj op log` browser with per-entry revert/restore) - jj-idea-aii0. */
-    OPERATION_LOG(3);
+    OPERATION_LOG(3),
+
+    /** Git remote management dialog (jj-idea-06tq.2): add/edit/remove remotes. */
+    MANAGE_REMOTES(4);
 
     override val id = name.snakeToCamelCase()
     override val displayName get() = JujutsuBundle.message("preview.$id.name")

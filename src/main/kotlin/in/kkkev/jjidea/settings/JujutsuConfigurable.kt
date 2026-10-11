@@ -22,6 +22,8 @@ import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import `in`.kkkev.jjidea.JujutsuBundle
 import `in`.kkkev.jjidea.actions.git.GitPushDialog
+import `in`.kkkev.jjidea.actions.git.manageRemotesEnabled
+import `in`.kkkev.jjidea.actions.git.showManageRemotes
 import `in`.kkkev.jjidea.jj.*
 import `in`.kkkev.jjidea.jj.cli.Config
 import `in`.kkkev.jjidea.jj.cli.config
@@ -592,6 +594,13 @@ class JujutsuConfigurable(
                     repoSettingsPanels.add(repoPanel)
 
                     collapsibleGroup(repo.displayName) {
+                        if (manageRemotesEnabled()) {
+                            row {
+                                button(JujutsuBundle.message("settings.repo.remotes.button")) {
+                                    showManageRemotes(project, repo)
+                                }
+                            }
+                        }
                         // jj-idea-i0e6: hidden until the background load above resolves something
                         // to show - a repo with no identity anywhere is already covered by the
                         // "Configure Jujutsu User" notification, not this row.
@@ -719,8 +728,8 @@ class JujutsuConfigurable(
             }
         }
 
-        // Nothing is in preview right now (the last feature graduated in jj-idea-2570.4); the access-code
-        // UI stays wired so the next gated feature only has to add an enum entry.
+        // Shown only while a feature is in preview (PreviewFeature has entries); when the last one
+        // graduates the group disappears again - the access-code UI stays wired for the next one.
         if (previewFeatures.isNotEmpty()) {
             group(JujutsuBundle.message("settings.group.preview")) {
                 val codeField = JBTextField().also { it.name = PREVIEW_CODE_FIELD_NAME }

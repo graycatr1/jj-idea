@@ -3421,6 +3421,31 @@ failing on 0.42+ with `error: unexpected argument '--allow-new'`:
   push succeeds
 - [ ] Cancel either confirmation dialog → no push occurs, bookmark remains untracked
 
+#### Manage Git Remotes (jj-idea-06tq.2)
+
+**Code:** `actions/git/ManageRemotesDialog.kt` (+ `RemoteEditDialog`), `actions/git/ManageRemotesAction.kt`, `actions/git/RemoteValidation.kt`
+
+Setup: **early-access (preview) feature `manageRemotes`** - gated. Mint a code
+(`./gradlew previewCode --args="mint --features manageRemotes --for me"`), enter it under Settings → Version Control →
+Jujutsu → Preview features and tick **Manage Git remotes** (or start the IDE with
+`-Djjidea.preview.manageRemotes=true` in the run configuration's VM options). Have a colocated repo with one remote
+(`origin`) and a second bare repo to use as a new remote URL.
+
+- [ ] Without the property / access code: **Manage Git Remotes...** is absent from the Jujutsu menu and from the per-repo Settings group
+
+- [ ] **VCS → Jujutsu → Manage Git Remotes...** opens a dialog titled with the repo name, listing `origin` with its URL; only a **Close** button; a hint says authentication uses the Git credential helper / SSH agent and changes cannot be undone
+- [ ] **Settings → Version Control → Jujutsu → Repository Settings → (repo) → Manage Git Remotes...** opens the same dialog for that repo
+- [ ] **+** → enter `upstream` and the bare repo's URL → OK → the row appears immediately; `jj git remote list` shows it; the Push and Fetch dialogs now offer `upstream` without reopening the project
+- [ ] **+** with name `origin` → inline error "already exists", OK disabled; with `bad name`, `a..b`, `-x` or blank → inline name error; blank URL or a URL starting with `-` → inline URL error; an scp-like URL (`git@host:a/b.git`) and a path with spaces are accepted
+- [ ] Select `upstream` → **Edit** → change only the URL → OK → URL updates in the table; change only the name → the row is renamed and its remote-tracking bookmarks (bookmarks panel, log chips) follow the new name; change both → both apply
+- [ ] Edit to a name that already exists → inline error (the rename is never attempted)
+- [ ] Select a remote → **-** → confirmation names the remote and URL and warns it cannot be undone → **Cancel** keeps it; **Remove** deletes it, and its `name@remote` bookmarks disappear from the log/bookmarks panel
+- [ ] Failure path: remove a remote externally (`jj git remote remove x` in a terminal) then **-** on its stale row → an error dialog shows jj's message verbatim
+- [ ] Multi-root project: the dialog has a **Repository:** drop-down at the top (absent for a single repo); the Settings button preselects that repo, the menu action preselects the first. Switching repos reloads the table for that repo (briefly empty, no stale rows from the previous repo); add/edit/remove after switching affect the newly selected repo only
+- [ ] No Undo balloon appears after any remote change (these are not undoable via `jj op revert`)
+
+**Regression scope:** MT-GIT (push/fetch remote pickers refresh), MT-SETTINGS (new button in the per-repo group), MT-BOOKMARK (remote-aware chips update on remove/rename)
+
 ### MT-SETTINGS
 
 **Settings panel**

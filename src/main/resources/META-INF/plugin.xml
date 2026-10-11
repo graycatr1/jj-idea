@@ -169,6 +169,7 @@
 
     <action id="Jujutsu.GitFetch" class="in.kkkev.jjidea.actions.git.GitFetchAction"/>
     <action id="Jujutsu.GitPush" class="in.kkkev.jjidea.actions.git.GitPushAction"/>
+    <action id="Jujutsu.ManageRemotes" class="in.kkkev.jjidea.actions.git.ManageRemotesAction"/>
 
     <!-- Stage 1 of the undo roadmap (jj-idea-v9zp): persistent "Undo <last action>" entry that
          survives a dismissed undo balloon. Presentation names the operation - see
@@ -214,6 +215,7 @@
       <reference ref="Jujutsu.UndoLastOperation"/>
       <reference ref="Jujutsu.ShowOperationLog"/>
       <reference ref="Jujutsu.SetDiffBase"/>
+      <reference ref="Jujutsu.ManageRemotes"/>
       <add-to-group group-id="VcsGlobalGroup" anchor="after" relative-to-action="Vcs.Specific"/>
     </group>
 

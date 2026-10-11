@@ -570,6 +570,18 @@ interface CommandExecutor {
      */
     fun gitRemoteList(): CommandResult
 
+    /** Add a Git remote (`jj git remote add <name> <url>`). Fails if [name] already exists. */
+    fun gitRemoteAdd(name: String, url: String): CommandResult
+
+    /** Remove a Git remote (`jj git remote remove <name>`). Also forgets its remote-tracking bookmarks. */
+    fun gitRemoteRemove(name: String): CommandResult
+
+    /** Rename a Git remote (`jj git remote rename <old> <new>`). */
+    fun gitRemoteRename(oldName: String, newName: String): CommandResult
+
+    /** Change a Git remote's URL (`jj git remote set-url <name> <url>`). */
+    fun gitRemoteSetUrl(name: String, url: String): CommandResult
+
     /**
      * Find the most recent ancestor of [revision] that has been pushed to [remoteName].
      * Returns the full commit hash, or null if no pushed ancestor is found.

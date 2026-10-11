@@ -156,6 +156,21 @@ internal fun restoreChangesInArgs(filePaths: List<FilePath>, revision: Revision,
 
 internal fun gitRemoteListArgs() = JjInvocation(READ_ONLY, "git", "remote", "list")
 
+/*
+ * Remote add/remove/rename/set-url are IRREVERSIBLE: they change the git config, not repo-scope
+ * operation state, so `jj op revert` cannot undo them (see [Reversibility]).
+ */
+internal fun gitRemoteAddArgs(name: String, url: String) =
+    JjInvocation(IRREVERSIBLE, "git", "remote", "add", name, url)
+
+internal fun gitRemoteRemoveArgs(name: String) = JjInvocation(IRREVERSIBLE, "git", "remote", "remove", name)
+
+internal fun gitRemoteRenameArgs(oldName: String, newName: String) =
+    JjInvocation(IRREVERSIBLE, "git", "remote", "rename", oldName, newName)
+
+internal fun gitRemoteSetUrlArgs(name: String, url: String) =
+    JjInvocation(IRREVERSIBLE, "git", "remote", "set-url", name, url)
+
 internal fun configGetArgs(key: String) =
     JjInvocation(READ_ONLY, buildList { addAllIfNotNull("config", "get", key) })
 
@@ -966,6 +981,15 @@ class CliExecutor(
     )
 
     override fun gitRemoteList() = execute(root, gitRemoteListArgs())
+
+    override fun gitRemoteAdd(name: String, url: String) = execute(root, gitRemoteAddArgs(name, url))
+
+    override fun gitRemoteRemove(name: String) = execute(root, gitRemoteRemoveArgs(name))
+
+    override fun gitRemoteRename(oldName: String, newName: String) =
+        execute(root, gitRemoteRenameArgs(oldName, newName))
+
+    override fun gitRemoteSetUrl(name: String, url: String) = execute(root, gitRemoteSetUrlArgs(name, url))
 
     override fun latestPushedAncestorCommitId(revision: Revision, remoteName: String): String? {
         val revset = Expression("latest(ancestors($revision) & ancestors(remote_bookmarks(remote=$remoteName)))")
