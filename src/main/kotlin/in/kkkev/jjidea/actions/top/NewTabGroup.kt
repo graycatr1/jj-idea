@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import `in`.kkkev.jjidea.JujutsuBundle
 import `in`.kkkev.jjidea.ui.oplog.isOperationLogEnabled
 import `in`.kkkev.jjidea.vcs.isJujutsu
@@ -42,7 +43,7 @@ class NewTabGroup : ActionGroup(
 
     /** Only reached when [update] marked this a perform-group, i.e. there is no menu to show. */
     override fun actionPerformed(e: AnActionEvent) {
-        ActionManager.getInstance().getAction(NEW_LOG_TAB)?.actionPerformed(e)
+        ActionManager.getInstance().getAction(NEW_LOG_TAB)?.let { ActionUtil.performActionDumbAwareWithCallbacks(it, e) }
     }
 
     private companion object {
