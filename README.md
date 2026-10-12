@@ -1,5 +1,18 @@
 # Jujutsu VCS Plugin for IntelliJ IDEA
 
+## Local fork installation
+
+This fork installs as **Jujutsu VCS Integration (Local Fork)** with plugin ID
+`in.graycatr1.jj-idea`, separate from the upstream Marketplace plugin. Its Edit action
+resumes an unnamed editing child, creating one only when no editing slot exists.
+
+Build with `./gradlew buildPlugin`. Uninstall the upstream **Jujutsu VCS Integration**
+plugin and restart the IDE, then use **Settings → Plugins → ⚙️ → Install Plugin from Disk**
+to install `build/distributions/jj-idea-local-fork-0.9.1-fork.1.zip` and restart again.
+Only run one of the two plugins at a time: they register the same VCS and actions.
+For later fork updates, install the newly built ZIP from disk. The independent ID and
+installation directory keep upstream updates from replacing this fork.
+
 Native IntelliJ integration for [Jujutsu (jj)](https://jj-vcs.github.io/jj/), a Git-compatible version control system built around a fundamentally different workflow: your working copy is always a commit.
 
 ![Custom log view with commit graph and tooltip](docs/images/log-light-with-tooltip.png)

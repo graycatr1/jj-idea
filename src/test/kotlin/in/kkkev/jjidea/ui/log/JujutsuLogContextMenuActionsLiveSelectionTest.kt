@@ -48,6 +48,7 @@ class JujutsuLogContextMenuActionsLiveSelectionTest {
         listOf(
             "Jujutsu.NewChange",
             "Jujutsu.EditChange",
+            "Jujutsu.SquashIntoParent",
             "Jujutsu.RebaseChangeToolbar",
             "Jujutsu.DescribeChangeToolbar",
             "Jujutsu.MoveChangeUp",

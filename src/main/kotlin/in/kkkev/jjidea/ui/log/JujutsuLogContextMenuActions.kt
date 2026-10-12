@@ -80,7 +80,7 @@ object JujutsuLogContextMenuActions {
         add(ManagedActions["Jujutsu.NewChange"])
         add(newChangeFromAction(project, uniqueRepo, entries))
 
-        // Offer "Edit" for non-working-copy, non-immutable changes
+        // Offer "Edit" by creating a child of a mutable change
         add(ManagedActions["Jujutsu.EditChange"])
 
         // Offer "Describe" for mutable changes
@@ -106,7 +106,7 @@ object JujutsuLogContextMenuActions {
         add(duplicateChangeAction(project, uniqueRepo, entries))
         add(duplicateOntoAction(project, uniqueRepo, entries))
 
-        add(squashAction(project, squashableEntry(entry)))
+        add(ManagedActions["Jujutsu.SquashIntoParent"])
         val squashIntoSrcs = squashIntoSources(entries)
         add(squashIntoAction(uniqueRepo?.takeIf { squashIntoSrcs.isNotEmpty() }, squashIntoSrcs))
         add(squashFromAction(entry?.takeIf { !it.immutable }))

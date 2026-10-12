@@ -24,30 +24,34 @@ import `in`.kkkev.jjidea.util.runLater
  */
 fun squashAction(project: Project, entry: LogEntry?) =
     nullAndDumbAwareAction(entry, "log.action.squash.into.parent", JujutsuIcons.Squash) {
-        fun openDialog() {
-            target.repo.runRecoverableInBackground(retry = ::openDialog) {
-                val changes = ChangeService.loadChanges(target)
-                // Full id, not short: a short prefix cached at an earlier fetch can become
-                // ambiguous by the time it's substituted into a revset here (GitHub #76).
-                val candidateParents = target.repo.logService
-                    .getLogBasic(Expression("parents(${target.id.full})"))
-                    .getOrThrow()
-                    .filter { !it.immutable }
+        openSquashIntoParentDialog(target)
+    }
 
-                runLater {
-                    val dialog = SquashIntoDialog(
-                        target.repo,
-                        SquashMode.PickDestination(listOf(target), candidateParents),
-                        changes
-                    )
-                    if (!dialog.showAndGet()) return@runLater
-                    val spec = dialog.result ?: return@runLater
-                    executeSquashInto(target.repo, listOf(target), spec)
-                }
+internal fun openSquashIntoParentDialog(target: LogEntry) {
+    fun openDialog() {
+        target.repo.runRecoverableInBackground(retry = ::openDialog) {
+            val changes = ChangeService.loadChanges(target)
+            // Full id, not short: a short prefix cached at an earlier fetch can become
+            // ambiguous by the time it's substituted into a revset here (GitHub #76).
+            val candidateParents = target.repo.logService
+                .getLogBasic(Expression("parents(${target.id.full})"))
+                .getOrThrow()
+                .filter { !it.immutable }
+
+            runLater {
+                val dialog = SquashIntoDialog(
+                    target.repo,
+                    SquashMode.PickDestination(listOf(target), candidateParents),
+                    changes
+                )
+                if (!dialog.showAndGet()) return@runLater
+                val spec = dialog.result ?: return@runLater
+                executeSquashInto(target.repo, listOf(target), spec)
             }
         }
-        openDialog()
     }
+    openDialog()
+}
 
 /**
  * Determine whether a squash action should be enabled for the given entry.

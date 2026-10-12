@@ -311,14 +311,14 @@ class UnifiedJujutsuLogPanel(project: Project, val config: LogWindowConfig) :
     }
 
     /**
-     * One-click New/Edit/Rebase/Describe buttons ahead of Refresh, for the most-used log
+     * Edit/Squash/Rebase/Describe buttons ahead of Refresh, for the most-used log
      * operations (GitHub #51 point 8 / VisualJJ parity; Rebase and Describe added for GitHub #78,
      * the requester's most-used commands, previously only reachable via the right-click menu).
      * File history doesn't override this.
      */
     override fun primaryActions() = listOfNotNull(
-        ManagedActions["Jujutsu.NewChange"],
         ManagedActions["Jujutsu.EditChange"],
+        ManagedActions["Jujutsu.SquashIntoParent"],
         ManagedActions["Jujutsu.RebaseChangeToolbar"],
         ManagedActions["Jujutsu.DescribeChangeToolbar"]
     )

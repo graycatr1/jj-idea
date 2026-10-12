@@ -201,10 +201,10 @@ class JujutsuLogContextMenuActionsTest {
     @Nested
     inner class `Edit action availability` {
         @Test
-        fun `working copy entry filtered out`() {
+        fun `working copy entry can be edited in a new child`() {
             val entry = createEntry("abc123", isWorkingCopy = true)
 
-            editableEntry(entry).shouldBeNull()
+            editableEntry(entry) shouldBe entry
         }
 
         @Test

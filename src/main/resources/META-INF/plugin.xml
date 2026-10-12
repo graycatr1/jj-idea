@@ -1,6 +1,6 @@
 <idea-plugin>
-  <id>in.kkkev.jj-idea</id>
-  <name>Jujutsu VCS Integration</name>
+  <id>in.graycatr1.jj-idea</id>
+  <name>Jujutsu VCS Integration (Local Fork)</name>
   <vendor email="jj-idea@kkkev.in" url="https://github.com/kkkev/jj-idea">Kevin Thomas</vendor>
 
   <resource-bundle>messages.JujutsuBundle</resource-bundle>
@@ -234,7 +234,7 @@
       <keyboard-shortcut first-keystroke="meta shift N" keymap="Mac OS X 10.5+"/>
     </action>
 
-    <!-- "Edit": moves the working copy to the selected change. Used by the log toolbar and context menu.
+    <!-- "Edit": resumes an unnamed editing child, or creates one. Used by the toolbar and context menu.
          Ctrl/Cmd+Shift+E soft-conflicts with IntelliJ's built-in "Recent Locations" - accepted, since
          EditChangeAction disables outside the log table (no LOG_ENTRY), so Recent Locations still wins
          everywhere except when a log row is selected. -->
@@ -243,6 +243,8 @@
       <keyboard-shortcut first-keystroke="meta shift E" keymap="Mac OS X"/>
       <keyboard-shortcut first-keystroke="meta shift E" keymap="Mac OS X 10.5+"/>
     </action>
+
+    <action id="Jujutsu.SquashIntoParent" class="in.kkkev.jjidea.actions.change.SquashIntoParentAction"/>
 
     <!-- Actions to copy various fields of a log entry (jj-idea-mavt, GitHub #137): keymap-assignable, unbound by
          default. Read the selected entry from the log; the context menu references them by id. -->
