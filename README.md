@@ -12,7 +12,10 @@ The log details pane keeps the historical diff read-only.
 
 Build with `./gradlew buildPlugin`. Uninstall the upstream **Jujutsu VCS Integration**
 plugin and restart the IDE, then use **Settings → Plugins → ⚙️ → Install Plugin from Disk**
-to install `build/distributions/jj-idea-local-fork-0.9.1-fork.3.zip` and restart again.
+to install `build/distributions/jj-idea-local-fork-0.9.1-fork.4.zip` and restart again.
+
+For recurring Git index locks and recovery after an interrupted export, see
+[lock diagnostics](docs/index-lock-diagnostics.md).
 Only run one of the two plugins at a time: they register the same VCS and actions.
 For later fork updates, install the newly built ZIP from disk. The independent ID and
 installation directory keep upstream updates from replacing this fork.

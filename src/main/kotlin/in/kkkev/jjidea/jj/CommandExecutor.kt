@@ -113,6 +113,12 @@ interface CommandExecutor {
                 override val exitCode get() = -1
             }
 
+            /** A safety gate refused to start a process until the repository is recovered. */
+            data class Blocked(override val stderr: String) : Failure {
+                override val stdout get() = ""
+                override val exitCode get() = -1
+            }
+
             /** No process was created (e.g. the jj executable wasn't found), so there are no streams. */
             data class NotLaunched(val executable: String, override val stderr: String) : Failure {
                 override val stdout get() = ""

@@ -58,7 +58,7 @@ plugins {
 }
 
 group = "in.kkkev"
-version = "0.9.1-fork.3"
+version = "0.9.1-fork.4"
 
 repositories {
     mavenCentral()

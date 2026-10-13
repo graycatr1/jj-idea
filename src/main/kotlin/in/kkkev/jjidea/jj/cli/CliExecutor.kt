@@ -710,6 +710,7 @@ class CliExecutor(
     private val trackUndo: Boolean = false
 ) : CommandExecutor {
     private val log = Logger.getInstance(javaClass)
+    private val commandGate = root?.let { RepositoryCommandGate.forRepository(it.path) }
     private val defaultTimeout = TimeUnit.SECONDS.toMillis(30)
     private val networkTimeout = TimeUnit.SECONDS.toMillis(120)
 
@@ -1117,6 +1118,15 @@ class CliExecutor(
         invocation: JjInvocation,
         timeout: Long = defaultTimeout,
         warnOnFailure: Boolean = true
+    ): CommandExecutor.CommandResult = commandGate?.execute(invocation) {
+        executeUnlocked(workingDir, invocation, timeout, warnOnFailure)
+    } ?: executeUnlocked(workingDir, invocation, timeout, warnOnFailure)
+
+    private fun executeUnlocked(
+        workingDir: VirtualFile?,
+        invocation: JjInvocation,
+        timeout: Long = defaultTimeout,
+        warnOnFailure: Boolean = true
     ): CommandExecutor.CommandResult {
         // Only a REVERSIBLE command is worth the extra `op log` call below - tracking anything
         // else would either find nothing (READ_ONLY writes no operation) or offer an undo we know
@@ -1208,6 +1218,14 @@ class CliExecutor(
      * [com.intellij.openapi.vcs.history.VcsFileRevision.loadContent]).
      */
     private fun executeBytes(
+        workingDir: VirtualFile?,
+        invocation: JjInvocation,
+        timeout: Long = defaultTimeout
+    ): ByteArray = commandGate?.executeBytes(invocation) {
+        executeBytesUnlocked(workingDir, invocation, timeout)
+    } ?: executeBytesUnlocked(workingDir, invocation, timeout)
+
+    private fun executeBytesUnlocked(
         workingDir: VirtualFile?,
         invocation: JjInvocation,
         timeout: Long = defaultTimeout
