@@ -58,7 +58,7 @@ plugins {
 }
 
 group = "in.kkkev"
-version = "0.9.1-fork.1"
+version = "0.9.1-fork.2"
 
 repositories {
     mavenCentral()
@@ -347,6 +347,8 @@ tasks.test {
     // Clear whatever IJPGP configured directly on the shared, default test task object before
     // this block runs (this task is meant to be fully independent of IJPGP's platform bootstrap).
     systemProperties.clear()
+    // Plain unit tests do not bootstrap the IDE's desktop UI/HiDPI initialization.
+    systemProperty("java.awt.headless", "true")
 
     // Exclude specifically test-framework-junit5 (added by IJPGP's testFramework(JUnit5)
     // declaration): it registers a LauncherSessionListener service provider that JUnit5's

@@ -4,11 +4,15 @@
 
 This fork installs as **Jujutsu VCS Integration (Local Fork)** with plugin ID
 `in.graycatr1.jj-idea`, separate from the upstream Marketplace plugin. Its Edit action
-resumes an unnamed editing child, creating one only when no editing slot exists.
+continues an unnamed selection directly. Editing a described change asks whether to continue
+the current slot, extend it with a new child, or start a new child of the selected change.
+The Working Copy panel also shows cumulative parent-base → current changes when the
+log selects the working copy’s direct parent; its diff has native revert arrows.
+The log details pane keeps the historical diff read-only.
 
 Build with `./gradlew buildPlugin`. Uninstall the upstream **Jujutsu VCS Integration**
 plugin and restart the IDE, then use **Settings → Plugins → ⚙️ → Install Plugin from Disk**
-to install `build/distributions/jj-idea-local-fork-0.9.1-fork.1.zip` and restart again.
+to install `build/distributions/jj-idea-local-fork-0.9.1-fork.2.zip` and restart again.
 Only run one of the two plugins at a time: they register the same VCS and actions.
 For later fork updates, install the newly built ZIP from disk. The independent ID and
 installation directory keep upstream updates from replacing this fork.

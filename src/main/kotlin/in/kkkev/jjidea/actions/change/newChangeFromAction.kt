@@ -29,7 +29,7 @@ fun newChangeFromAction(project: Project, repo: JujutsuRepository?, targetEntrie
         if (!dialog.showAndGet()) return@nullAndDumbAwareAction
         val spec = dialog.result ?: return@nullAndDumbAwareAction
 
-        target.createCommand {
+        target.createCommand(switchesWorkingCopy = spec.edit) {
             new(spec.description, spec.parents, spec.destinationMode, spec.edit)
         }.onSuccess {
             // edit=true (the default) moves the working copy to the new change, so select it;
@@ -41,6 +41,8 @@ fun newChangeFromAction(project: Project, repo: JujutsuRepository?, targetEntrie
             }
             project.saveDescriptionToHistory(spec.description)
             log.info("Created new change from ${spec.parents} with description: ${spec.description}")
-        }.onFailure { tellUser("log.action.new.error") }
+        }.onFailure {
+            tellUser("log.action.new.error")
+        }
             .executeAsync()
     }

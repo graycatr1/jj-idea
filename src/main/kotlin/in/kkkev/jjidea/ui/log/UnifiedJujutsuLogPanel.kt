@@ -104,6 +104,17 @@ class UnifiedJujutsuLogPanel(project: Project, val config: LogWindowConfig) :
         // Load saved column widths from the per-window config
         logTable.loadColumnWidths()
 
+        logTable.selectionModel.addListSelectionListener { event ->
+            if (isShowing && !event.valueIsAdjusting) {
+                publishWorkingPanelSelection()
+            }
+        }
+        addHierarchyListener { event ->
+            if (event.changeFlags and java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && isShowing) {
+                publishWorkingPanelSelection()
+            }
+        }
+
         // Restore + persist root gutter expansion state (per-tab, see LogWindowConfig.rootGutterExpanded)
         logTable.isRootGutterExpanded = config.rootGutterExpanded
         logTable.onGutterExpansionChanged = {
@@ -281,10 +292,19 @@ class UnifiedJujutsuLogPanel(project: Project, val config: LogWindowConfig) :
             }
         }
         detailsPanel.showCommits(logTable.selectedEntries)
+        publishWorkingPanelSelection()
         referenceFilterComponent.retryFilter()
         // Restore root filter after data loads (roots are only available once the model is populated)
         if (config.selectedRootPaths.isNotEmpty() || config.excludedRootPaths.isNotEmpty()) {
             rootFilterComponent?.setSelectedRoots(config.selectedRootPaths.toSet(), config.excludedRootPaths.toSet())
+        }
+    }
+
+    private fun publishWorkingPanelSelection() {
+        `in`.kkkev.jjidea.util.runLater {
+            if (isShowing && !Disposer.isDisposed(this)) {
+                project.stateModel.logSelection.notify(logTable.selectedEntries)
+            }
         }
     }
 

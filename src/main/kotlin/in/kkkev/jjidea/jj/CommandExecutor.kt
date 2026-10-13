@@ -1,5 +1,6 @@
 package `in`.kkkev.jjidea.jj
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
@@ -732,19 +733,30 @@ interface CommandExecutor {
             }
         }
 
+        fun beforeAttempt() = Unit
+        fun afterAttempt() = Unit
+
+        private fun executeAttempt(): CommandResult = try {
+            commandExecutor.action()
+        } finally {
+            runLater { afterAttempt() }
+        }
+
         fun executeAsync() {
             saveAllDocuments()
+            beforeAttempt()
             runInBackground {
-                handleResult(commandExecutor.action()) { executeAsync() }
+                handleResult(executeAttempt()) { executeAsync() }
             }
         }
 
         fun executeWithProgress(project: Project, title: String) {
             saveAllDocuments()
+            beforeAttempt()
             object : Task.Backgroundable(project, title, false) {
                 override fun run(indicator: ProgressIndicator) {
                     indicator.isIndeterminate = true
-                    handleResult(commandExecutor.action()) { executeWithProgress(project, title) }
+                    handleResult(executeAttempt()) { executeWithProgress(project, title) }
                 }
             }.queue()
         }
@@ -759,8 +771,19 @@ interface CommandExecutor {
             override val action: CommandExecutor.() -> CommandResult,
             override val onSuccess: ContextWithRepo<CommandResult.Success>.(String) -> Unit = {},
             override val onSuccessResult: CommandResult.Success.() -> Unit = {},
-            override val onFailure: CommandResult.Failure.() -> Unit = {}
+            override val onFailure: CommandResult.Failure.() -> Unit = {},
+            val switchesWorkingCopy: Boolean = false
         ) : Command<WithRepo, ContextWithRepo<CommandResult.Success>> {
+            override fun beforeAttempt() {
+                if (!switchesWorkingCopy) return
+                val app = ApplicationManager.getApplication()
+                val notify = { repo.project.stateModel.workingCopySwitchStarting.notifyImmediately(repo) }
+                if (app.isDispatchThread) notify() else app.invokeAndWait { notify() }
+            }
+
+            override fun afterAttempt() {
+                if (switchesWorkingCopy) repo.project.stateModel.workingCopySwitchFinished.notifyImmediately(repo)
+            }
             override fun createContext(result: CommandResult.Success) = ContextWithRepo(this, result)
 
             fun onSuccess(callback: JujutsuRepository.(String) -> Unit): WithRepo =
@@ -835,4 +858,14 @@ interface CommandExecutor {
 /** Builds a [CommandExecutor.Command] against [this] repo's own executor. */
 fun JujutsuRepository.createCommand(
     action: CommandExecutor.() -> CommandExecutor.CommandResult
-): CommandExecutor.Command.WithRepo = CommandExecutor.Command.WithRepo(this, commandExecutor, action)
+): CommandExecutor.Command.WithRepo = createCommand(false, action)
+
+fun JujutsuRepository.createCommand(
+    switchesWorkingCopy: Boolean,
+    action: CommandExecutor.() -> CommandExecutor.CommandResult
+): CommandExecutor.Command.WithRepo = CommandExecutor.Command.WithRepo(
+    this,
+    commandExecutor,
+    action,
+    switchesWorkingCopy = switchesWorkingCopy
+)

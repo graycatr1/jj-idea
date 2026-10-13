@@ -22,6 +22,7 @@ import com.intellij.util.CommonProcessors
 import com.intellij.vcsUtil.VcsUtil
 import `in`.kkkev.jjidea.ui.services.JujutsuNotifications
 import `in`.kkkev.jjidea.util.NotifiableState
+import `in`.kkkev.jjidea.util.SimpleNotifier
 import `in`.kkkev.jjidea.util.notifiableState
 import `in`.kkkev.jjidea.util.runInBackground
 import `in`.kkkev.jjidea.util.simpleNotifier
@@ -296,6 +297,12 @@ class JujutsuStateModel(private val project: Project) : Disposable {
      * Log panels and data loaders listen and select the matching entry if it belongs to their repo.
      */
     val changeSelection = simpleNotifier<ChangeKey>(project, "Jujutsu Change Selection")
+
+    /** Actual log-row selection, distinct from an action's request to navigate to a change. */
+    val logSelection = simpleNotifier<List<LogEntry>>(project, "Jujutsu Log Row Selection")
+
+    val workingCopySwitchStarting = SimpleNotifier<JujutsuRepository>(project, "Jujutsu Working Copy Switch")
+    val workingCopySwitchFinished = SimpleNotifier<JujutsuRepository>(project, "Jujutsu Working Copy Switch Finished")
 
     /**
      * Fired when a log-row bookmark/tag chip's default click action (or its "Filter log to this

@@ -123,6 +123,9 @@
     <!-- Per-hunk gutter arrows for HunkPickerDialog (jj-idea-xuob). Global EP: gated to a
          strict no-op on every other diff viewer by HunkArrowDiffExtension.HUNK_PICKER_SESSION. -->
     <diff.DiffExtension implementation="in.kkkev.jjidea.diffedit.HunkArrowDiffExtension"/>
+    <diff.DiffExtension implementation="in.kkkev.jjidea.ui.workingcopy.ParentEditingDiffExtension"/>
+    <openapi.vcs.changes.actions.diff.ChangeDiffRequestProvider
+        implementation="in.kkkev.jjidea.ui.workingcopy.ParentEditingDiffRequestProvider"/>
 
     <!-- Reads a conflicted Change's three-way content from its own revision instead of the
          platform default (working copy on disk) - GitHub #119, jj-idea-ct7e. -->
@@ -234,7 +237,7 @@
       <keyboard-shortcut first-keystroke="meta shift N" keymap="Mac OS X 10.5+"/>
     </action>
 
-    <!-- "Edit": resumes an unnamed editing child, or creates one. Used by the toolbar and context menu.
+    <!-- "Edit": continues an unnamed selection, or confirms the base of a new editing change. Used by the toolbar and context menu.
          Ctrl/Cmd+Shift+E soft-conflicts with IntelliJ's built-in "Recent Locations" - accepted, since
          EditChangeAction disables outside the log table (no LOG_ENTRY), so Recent Locations still wins
          everywhere except when a log row is selected. -->

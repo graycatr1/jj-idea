@@ -73,6 +73,7 @@ class UnifiedWorkingCopyPanel(private val project: Project) : JPanel(BorderLayou
     private val diffPreview =
         JujutsuEditorTabDiffPreview(changesTree, resolveConflictsOnDoubleClick = true, contextLabel = { "@" })
     private val controlsPanel = WorkingCopyControlsPanel(project)
+    private val parentChangesPanel = ParentChangesPanel(project, { controlsPanel.boundRepository })
 
     // Wraps to the tool window's width; the longer not-responding/unreadable messages truncated otherwise.
     private val emptyStateLabel = JBLabel().apply {
@@ -122,6 +123,7 @@ class UnifiedWorkingCopyPanel(private val project: Project) : JPanel(BorderLayou
 
         Disposer.register(this, diffPreview)
         Disposer.register(this, controlsPanel)
+        Disposer.register(this, parentChangesPanel)
         createUI()
         setupTreeInteractions()
         setupTreeExpansionTracking()
@@ -149,10 +151,23 @@ class UnifiedWorkingCopyPanel(private val project: Project) : JPanel(BorderLayou
         val changesToolbar = createChangesToolbar().apply {
             targetComponent = changesTree
         }
-        changesPanel.add(changesToolbar.component, BorderLayout.NORTH)
+        val changesHeader = JPanel(BorderLayout()).apply {
+            add(
+                JBLabel(JujutsuBundle.message("workingcopy.current.changes")).apply {
+                    border = JBUI.Borders.empty(4)
+                },
+                BorderLayout.NORTH
+            )
+            add(changesToolbar.component, BorderLayout.CENTER)
+        }
+        changesPanel.add(changesHeader, BorderLayout.NORTH)
         changesPanel.add(ScrollPaneFactory.createScrollPane(changesTree), BorderLayout.CENTER)
 
-        splitter.firstComponent = changesPanel
+        val changeLists = Splitter(true, 0.5f).apply { firstComponent = changesPanel }
+        parentChangesPanel.onVisibilityChanged = { visible ->
+            changeLists.secondComponent = if (visible) parentChangesPanel else null
+        }
+        splitter.firstComponent = changeLists
 
         // Bottom: Controls panel (dropdown selects repo, tree is just for viewing)
         splitter.secondComponent = controlsPanel
@@ -350,6 +365,7 @@ class UnifiedWorkingCopyPanel(private val project: Project) : JPanel(BorderLayou
     private fun bindRepository(repo: JujutsuRepository) {
         controlsPanel.boundRepository = repo
         changesTree.currentRepo = repo
+        parentChangesPanel.reload()
     }
 
     /** Test seam: the repository currently bound to [controlsPanel] (jj-idea-4d7p). */
@@ -424,7 +440,12 @@ class UnifiedWorkingCopyPanel(private val project: Project) : JPanel(BorderLayou
             ?.joinToString("/")
 
     fun scheduleReloadChanges() =
-        reloadQueue.queue(Update.create("reload") { reloadChangesFromCache() })
+        reloadQueue.queue(
+            Update.create("reload") {
+                reloadChangesFromCache()
+                parentChangesPanel.reload()
+            }
+        )
 
     /** Forces the reload queue to process pending updates synchronously (test seam). */
     fun flushReloadQueue() = reloadQueue.flush()

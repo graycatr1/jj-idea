@@ -276,6 +276,9 @@ class SimpleNotifier<E>(val project: Project, topicDisplayName: String) : Notifi
             publisher.onEvent(event)
         }
     }
+
+    /** For EDT lifecycle barriers that must run before a background working-copy switch. */
+    fun notifyImmediately(event: E) = publisher.onEvent(event)
 }
 
 fun <E> simpleNotifier(project: Project, topicDisplayName: String): Notifier<E> =

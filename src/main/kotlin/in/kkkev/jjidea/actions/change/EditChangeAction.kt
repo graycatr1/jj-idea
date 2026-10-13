@@ -3,101 +3,76 @@ package `in`.kkkev.jjidea.actions.change
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAwareAction
-import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.ui.SimpleListCellRenderer
+import com.intellij.openapi.ui.Messages
 import `in`.kkkev.jjidea.JujutsuBundle
 import `in`.kkkev.jjidea.actions.logEntry
 import `in`.kkkev.jjidea.jj.Description
-import `in`.kkkev.jjidea.jj.Expression
 import `in`.kkkev.jjidea.jj.LogEntry
 import `in`.kkkev.jjidea.jj.WorkingCopy
 import `in`.kkkev.jjidea.jj.createCommand
 import `in`.kkkev.jjidea.jj.invalidate
-import `in`.kkkev.jjidea.jj.runRecoverableInBackground
-import `in`.kkkev.jjidea.util.runLater
+import `in`.kkkev.jjidea.jj.stateModel
 
-/**
- * The log-selected entry that "Edit" can act on, or `null` if editing isn't applicable:
- * immutable changes are excluded because the editing workflow squashes back into the parent.
- */
 fun editableEntry(entry: LogEntry?): LogEntry? = entry?.takeIf { !it.immutable }
 
-/** Unnamed changes are editing slots, including slots that already contain file changes. */
-internal fun editingSlots(target: LogEntry, children: List<LogEntry>): List<LogEntry> {
-    if (target.description.actual.isBlank()) return listOf(target)
-    return children.filter {
-        it.repo == target.repo &&
-            !it.immutable &&
-            it.description.actual.isBlank() &&
-            it.parentIds == listOf(target.id)
+internal data class EditingChoice(val entry: LogEntry, val createChild: Boolean)
+
+/** Continuing a slot needs no new change; creating one always requires an explicit choice. */
+internal fun editingChoices(target: LogEntry, workingCopy: LogEntry?): List<EditingChoice> {
+    if (target.description.actual.isBlank()) return listOf(EditingChoice(target, false))
+    val currentSlot = workingCopy?.takeIf {
+        it.repo == target.repo && it.description.actual.isBlank() && it.parentIds == listOf(target.id)
+    }
+    return if (currentSlot == null) {
+        listOf(EditingChoice(target, true))
+    } else {
+        listOf(EditingChoice(currentSlot, false), EditingChoice(currentSlot, true), EditingChoice(target, true))
     }
 }
 
-/**
- * Toolbar/context-menu "Edit" action that reads its target from the event's log selection.
- * Resumes an unnamed child of the selected change, or creates one if no editing slot exists.
- * An unnamed selection is itself an editing slot and is edited directly.
- *
- * Reads the current selection at action time via [in.kkkev.jjidea.actions.logEntry] (rather
- * than capturing a fixed [LogEntry] at construction), so it can be registered once and
- * referenced by ID from the toolbar, menus, and keyboard shortcuts.
- */
+/** Directly resumes an unnamed selection; asks where a new editing change should start. */
 class EditChangeAction : DumbAwareAction(
     JujutsuBundle.message("log.action.edit"),
     JujutsuBundle.message("log.action.edit.tooltip"),
     AllIcons.Actions.Edit
 ) {
-    private val log = Logger.getInstance(javaClass)
-
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabled = editableEntry(e.logEntry) != null
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        if (e.project == null) return
+        val project = e.project ?: return
         val target = editableEntry(e.logEntry) ?: return
-
-        fun resume(slot: LogEntry?) {
-            target.repo.createCommand {
-                if (slot != null) edit(slot.id) else new(Description.EMPTY, listOf(target.id))
-            }
-                .onSuccess {
-                    invalidate(select = WorkingCopy, vfsChanged = true)
-                    log.info("Editing ${slot?.id ?: "new child of ${target.id}"}")
-                }.onFailure { tellUser("log.action.edit.error") }
-                .executeAsync()
+        val wc = project.stateModel.workingCopies.value[target.repo.directory.path]
+        val choices = editingChoices(target, wc)
+        val choice = if (target.description.actual.isBlank()) {
+            choices.single()
+        } else {
+            val labels = choices.map {
+                JujutsuBundle.message(
+                    if (it.createChild) "log.action.edit.create.child" else "log.action.edit.continue",
+                    it.entry.id.short
+                )
+            } + JujutsuBundle.message("button.cancel")
+            val selected = Messages.showDialog(
+                project,
+                JujutsuBundle.message("log.action.edit.choose.message"),
+                JujutsuBundle.message("log.action.edit.choose.title"),
+                labels.toTypedArray(),
+                0,
+                Messages.getQuestionIcon()
+            )
+            choices.getOrNull(selected) ?: return
         }
-
-        fun findSlot() {
-            target.repo.runRecoverableInBackground(retry = ::findSlot) {
-                val children = if (target.description.actual.isBlank()) {
-                    emptyList()
-                } else {
-                    target.repo.logService.getLogBasic(Expression("children(${target.id.full})")).getOrThrow()
-                }
-                val slots = editingSlots(target, children)
-                runLater {
-                    val current = slots.singleOrNull { it.isWorkingCopy }
-                    when {
-                        current != null -> resume(current)
-                        slots.size <= 1 -> resume(slots.singleOrNull())
-                        else -> JBPopupFactory.getInstance().createPopupChooserBuilder(slots)
-                            .setTitle(JujutsuBundle.message("log.action.edit.choose.slot"))
-                            .setRenderer(
-                                SimpleListCellRenderer.create<LogEntry> { label, slot, _ ->
-                                    label.text = slot.id.short
-                                }
-                            )
-                            .setItemChosenCallback { resume(it) }
-                            .createPopup()
-                            .showInBestPositionFor(e.dataContext)
-                    }
-                }
-            }
+        target.repo.createCommand(switchesWorkingCopy = true) {
+            if (choice.createChild) new(Description.EMPTY, listOf(choice.entry.id)) else edit(choice.entry.id)
+        }.onSuccess {
+            invalidate(select = WorkingCopy, vfsChanged = true)
+        }.onFailure {
+            tellUser("log.action.edit.error")
         }
-        findSlot()
+            .executeAsync()
     }
 
     override fun getActionUpdateThread() = ActionUpdateThread.BGT

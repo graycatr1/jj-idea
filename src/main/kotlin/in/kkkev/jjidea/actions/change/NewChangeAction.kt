@@ -66,12 +66,14 @@ class NewChangeAction : DumbAwareAction(
         val project = e.project ?: return
         val target = resolveNewChangeTarget(e.logEntries) ?: return
 
-        target.repo.createCommand {
+        target.repo.createCommand(switchesWorkingCopy = true) {
             new(description = Description.EMPTY, parentRevisions = target.parents)
         }.onSuccess {
             // The new change becomes the working copy - select it
             invalidate(select = WorkingCopy, vfsChanged = true)
-        }.onFailure { tellUser("log.action.new.error") }
+        }.onFailure {
+            tellUser("log.action.new.error")
+        }
             .executeAsync()
     }
 
