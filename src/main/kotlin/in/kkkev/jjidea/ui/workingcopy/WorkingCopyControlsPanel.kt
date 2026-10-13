@@ -24,8 +24,6 @@ import `in`.kkkev.jjidea.ui.common.JujutsuIcons
 import `in`.kkkev.jjidea.ui.components.*
 import `in`.kkkev.jjidea.util.runLater
 import java.awt.BorderLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
 import java.awt.event.ItemEvent
 import javax.swing.*
 
@@ -93,18 +91,22 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
     private val descriptionEditor = DescriptionEditor(
         project,
         placeholder = JujutsuBundle.message("toolwindow.description.tooltip"),
-        minimumSize = JBUI.size(200, 70)
+        minimumSize = JBUI.size(200, 30)
     ).apply {
-        component.preferredSize = JBUI.size(400, 90)
+        component.preferredSize = JBUI.size(400, 50)
         addTextChangeListener {
             isDescriptionModified = text != persistedDescription
             updateDescriptionLabel()
         }
     }
 
-    private val currentChangeLabel = IconAwareHtmlPane(project)
+    private val currentChangeLabel = IconAwareHtmlPane(project).apply {
+        minimumSize = JBUI.size(0, 24)
+    }
 
-    private val descriptionLabel = JBLabel(JujutsuBundle.message("toolwindow.description.label"))
+    private val descriptionLabel = JBLabel(" ").apply {
+        toolTipText = JujutsuBundle.message("toolwindow.description.label")
+    }
 
     private lateinit var describeButton: JButton
     private lateinit var revertButton: JButton
@@ -119,44 +121,21 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
     private fun createUI() {
         border = JBUI.Borders.empty(8)
 
-        val topPanel = JPanel(GridBagLayout())
-        val gbc = GridBagConstraints().apply {
-            fill = GridBagConstraints.HORIZONTAL
-            anchor = GridBagConstraints.WEST
-            insets = JBUI.insets(2)
-        }
-
-        // Current change label (shows repo:changeId format). The repository selector used to sit
-        // above this (gridy=0) but moved up into createTopBar() (jj-idea-xsa8 follow-up) so it's
-        // adjacent to the action toolbar it also governs, rather than ~60% down the tool window
-        // from it.
-        gbc.gridx = 0
-        gbc.gridy = 0
-        gbc.gridwidth = 2
-        gbc.weightx = 1.0
-        topPanel.add(currentChangeLabel, gbc)
-
-        // Description label with inline action buttons
-        val descriptionHeaderPanel = JPanel().apply {
+        val descriptionActions = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             add(descriptionLabel)
-            add(Box.createHorizontalStrut(8))
+            add(Box.createHorizontalStrut(4))
             add(createDescribeButton())
             add(Box.createHorizontalStrut(4))
             add(createRevertButton())
-            add(Box.createHorizontalGlue())
         }
-
-        gbc.gridy = 1
-        topPanel.add(descriptionHeaderPanel, gbc)
-
-        // Description editor. CommitMessage scrolls itself - no JScrollPane wrapper needed.
-        gbc.gridy = 2
-        gbc.weighty = 1.0
-        gbc.fill = GridBagConstraints.BOTH
-        topPanel.add(descriptionEditor.component, gbc)
-
-        add(topPanel, BorderLayout.CENTER)
+        val header = JPanel(BorderLayout(JBUI.scale(4), 0)).apply {
+            add(currentChangeLabel, BorderLayout.CENTER)
+            add(descriptionActions, BorderLayout.EAST)
+        }
+        add(header, BorderLayout.NORTH)
+        // CommitMessage scrolls itself and remains resizable for longer descriptions.
+        add(descriptionEditor.component, BorderLayout.CENTER)
     }
 
     /** Update the list of available repositories in the dropdown */
@@ -332,9 +311,9 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
     }
 
     private fun createDescribeButton(): JButton {
-        describeButton = JButton(JujutsuBundle.message("button.describe")).apply {
+        describeButton = JButton(JujutsuIcons.Describe).apply {
             toolTipText = JujutsuBundle.message("button.describe.tooltip")
-            icon = JujutsuIcons.Describe
+            accessibleContext.accessibleName = JujutsuBundle.message("button.describe")
             addActionListener { describeCurrentChange() }
             isEnabled = false
         }
@@ -342,9 +321,9 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
     }
 
     private fun createRevertButton(): JButton {
-        revertButton = JButton("Revert").apply {
+        revertButton = JButton(AllIcons.Actions.Rollback).apply {
             toolTipText = "Reload description from working copy"
-            icon = AllIcons.Actions.Rollback
+            accessibleContext.accessibleName = "Revert description"
             addActionListener { revertDescription() }
             isEnabled = false
         }
@@ -363,6 +342,7 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
             descriptionEditor.text = Description.EMPTY
             descriptionEditor.setEnabled(false)
             currentChangeLabel.text = ""
+            currentChangeLabel.toolTipText = null
             isDescriptionModified = false
             persistedDescription = Description.EMPTY
             updateDescriptionLabel()
@@ -405,8 +385,7 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
     }
 
     private fun updateDescriptionLabel() {
-        val baseLabel = JujutsuBundle.message("toolwindow.description.label")
-        descriptionLabel.text = if (isDescriptionModified) "$baseLabel *" else baseLabel
+        descriptionLabel.text = if (isDescriptionModified) "*" else " "
         describeButton.isEnabled = isDescriptionModified && boundRepository != null
         revertButton.isEnabled = isDescriptionModified && boundRepository != null
     }
@@ -463,9 +442,25 @@ class WorkingCopyControlsPanel(private val project: Project) : JPanel(BorderLayo
 
     private fun updateWorkingCopyLabel(entry: LogEntry) {
         val linkifier = IssueLinkifier(IssueNavigationConfiguration.getInstance(project))
-        currentChangeLabel.text = htmlString(linkifier = linkifier) {
+        currentChangeLabel.toolTipText = htmlString(linkifier = linkifier) {
             appendSummary(entry)
             appendParents(entry)
+        }
+        // Non-breaking gaps keep the metadata on one row while retaining individual change links.
+        currentChangeLabel.text = htmlString {
+            append(entry.key)
+            space()
+            smaller {
+                if (entry.parentIds.isEmpty()) {
+                    append(JujutsuBundle.message("details.parents.none"))
+                } else {
+                    append(JujutsuBundle.message("details.parents.label"))
+                    entry.parentKeys.forEach {
+                        space()
+                        append(it)
+                    }
+                }
+            }
         }
     }
 
