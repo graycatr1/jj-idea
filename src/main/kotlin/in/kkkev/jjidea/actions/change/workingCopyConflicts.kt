@@ -9,7 +9,7 @@ import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
 import `in`.kkkev.jjidea.jj.conflict.firstConflictBlockOffset
 import `in`.kkkev.jjidea.vcs.filterInJujutsuRepo
-import `in`.kkkev.jjidea.vcs.merge.JujutsuConflictResolver
+import `in`.kkkev.jjidea.vcs.merge.openMergeWithResolutionReturn
 import `in`.kkkev.jjidea.vcs.possibleJujutsuVcs
 
 /**
@@ -36,7 +36,8 @@ internal fun workingCopyConflicts(project: Project): List<VirtualFile> =
 internal fun openMergeTool(project: Project, files: List<VirtualFile>) {
     if (files.isEmpty()) return
     val mergeProvider = project.possibleJujutsuVcs?.mergeProvider ?: return
-    JujutsuConflictResolver(project, mergeProvider).resolve(files)
+    FileDocumentManager.getInstance().saveAllDocuments()
+    openMergeWithResolutionReturn(project, files, mergeProvider)
 }
 
 /** The one file an editor-first resolve opens out of [files]: first in path order, O(files). */

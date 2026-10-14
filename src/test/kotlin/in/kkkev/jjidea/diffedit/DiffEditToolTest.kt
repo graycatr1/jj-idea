@@ -80,6 +80,16 @@ class DiffEditToolTest {
 
     // ---- withStagingTree ----
 
+    @Test
+    fun `content only staging opts into parent executable preservation in editor invocation`() {
+        DiffEditTool.withStagingTree(mapOf("script.sh" to "resolved"), preserveParentExecutable = true) { config, _ ->
+            config[1] shouldContain "\"--preserve-parent-executable\""
+        }
+        DiffEditTool.withStagingTree(mapOf("script.sh" to "resolved")) { config, _ ->
+            config[1].contains("--preserve-parent-executable") shouldBe false
+        }
+    }
+
     /** Extract the staging dir path from a `merge-tools.<tool>.program=<java>` arg's sibling. */
     private fun stagingDirFrom(configArgs: List<String>): Path {
         val editArgs = configArgs[1].substringAfter("edit-args=")

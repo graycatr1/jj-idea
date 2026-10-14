@@ -6,6 +6,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermission
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.readText
@@ -25,12 +27,12 @@ import kotlin.io.path.relativeTo
  */
 fun main(args: Array<String>) {
     require(args.size >= 3) {
-        "Usage: HunkApplyMain <stagingDir> <leftDir> <rightDir>"
+        "Usage: HunkApplyMain <stagingDir> <leftDir> <rightDir> [--preserve-parent-executable]"
     }
     val stagingDir = Path.of(args[0])
     val leftDir = Path.of(args[1])
     val rightDir = Path.of(args[2])
-    mirrorTree(stagingDir, leftDir, rightDir)
+    mirrorTree(stagingDir, leftDir, rightDir, args.getOrNull(3) == "--preserve-parent-executable")
 }
 
 /**
@@ -46,8 +48,10 @@ fun main(args: Array<String>) {
  *   because they were newly added in the revision and excluded from the staged side.
  *
  * Purely in terms of java.nio.file; no platform dependencies — directly unit-testable.
+ * With [preserveParentExecutable], staged existing files retain the parent's executable bits.
+ * New files and filesystems without POSIX permissions retain the usual staging permissions.
  */
-fun mirrorTree(stagingDir: Path, leftDir: Path, rightDir: Path) {
+fun mirrorTree(stagingDir: Path, leftDir: Path, rightDir: Path, preserveParentExecutable: Boolean = false) {
     val manifestPath = stagingDir.resolve(DiffEditTool.DELETED_MANIFEST_NAME)
     val deletedPaths: Set<String> = if (manifestPath.exists()) {
         manifestPath.readText().lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
@@ -84,10 +88,26 @@ fun mirrorTree(stagingDir: Path, leftDir: Path, rightDir: Path) {
         val dst = rightDir.resolve(rel)
         dst.parent?.toFile()?.mkdirs()
         Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING)
+        if (preserveParentExecutable && rel in leftFiles) {
+            copyExecutablePermissions(leftDir.resolve(rel), dst)
+        }
     }
 
     // Clean up empty directories left behind in right.
     pruneEmptyDirs(rightDir)
+}
+
+private fun copyExecutablePermissions(parent: Path, output: Path) {
+    val parentAttributes = Files.getFileAttributeView(parent, PosixFileAttributeView::class.java) ?: return
+    val outputAttributes = Files.getFileAttributeView(output, PosixFileAttributeView::class.java) ?: return
+    val executable = setOf(
+        PosixFilePermission.OWNER_EXECUTE,
+        PosixFilePermission.GROUP_EXECUTE,
+        PosixFilePermission.OTHERS_EXECUTE
+    )
+    val parentPermissions = parentAttributes.readAttributes().permissions()
+    val outputPermissions = outputAttributes.readAttributes().permissions()
+    outputAttributes.setPermissions((outputPermissions - executable) + (parentPermissions intersect executable))
 }
 
 /** Recursively collect all file paths relative to [base], as strings. */

@@ -69,33 +69,74 @@ class EditChangeActionTest {
     }
 
     @Test
-    fun `an unnamed change is continued without creating a child even with existing edits`() {
+    fun `an unnamed change is continued even with existing edits`() {
         val slot = entry(description = "", empty = false)
-        editingChoices(slot, slot) shouldBe listOf(EditingChoice(slot, false))
+        editingSlot(slot, emptyList()) shouldBe slot
     }
 
     @Test
-    fun `editing a described parent proposes continuing its slot or explicitly choosing a new base`() {
+    fun `editing a described parent does not resume its nonempty unnamed child`() {
         val parent = entry()
         val slot = entry(id = "slot", description = "", parents = listOf(parent.id), empty = false)
-        editingChoices(parent, slot) shouldBe listOf(
-            EditingChoice(slot, false),
-            EditingChoice(slot, true),
-            EditingChoice(parent, true)
-        )
+        editingSlot(parent, listOf(slot)).shouldBeNull()
     }
 
     @Test
-    fun `an unrelated working copy is not proposed as the base for editing a parent`() {
+    fun `editing a described parent resumes its empty unnamed child`() {
         val parent = entry()
-        val unrelated = entry(id = "other", description = "", empty = false)
-        editingChoices(parent, unrelated) shouldBe listOf(EditingChoice(parent, true))
+        val slot = entry(id = "slot", description = "", parents = listOf(parent.id))
+        editingSlot(parent, listOf(slot)) shouldBe slot
     }
 
     @Test
-    fun `a described working copy is not silently treated as an editing slot`() {
+    fun `an unrelated empty working copy is not an editing slot`() {
+        val parent = entry()
+        val unrelated = entry(id = "other", description = "", isWorkingCopy = true)
+        editingSlot(parent, listOf(unrelated)).shouldBeNull()
+    }
+
+    @Test
+    fun `a described empty child is not an editing slot`() {
         val parent = entry()
         val child = entry(id = "child", parents = listOf(parent.id))
-        editingChoices(parent, child) shouldBe listOf(EditingChoice(parent, true))
+        editingSlot(parent, listOf(child)).shouldBeNull()
+    }
+
+    @Test
+    fun `immutable children are not editing slots`() {
+        val parent = entry()
+        val child = entry(id = "child", description = "", parents = listOf(parent.id))
+        editingSlot(parent, listOf(child.copy(immutable = true))).shouldBeNull()
+    }
+
+    @Test
+    fun `empty child that inherits parent conflicts is reused`() {
+        val parent = entry().copy(hasConflict = true)
+        val child = entry(id = "child", description = "", parents = listOf(parent.id)).copy(hasConflict = true)
+        editingSlot(parent, listOf(child)) shouldBe child
+    }
+
+    @Test
+    fun `nonempty conflicted child is not reused`() {
+        val parent = entry().copy(hasConflict = true)
+        val child = entry(id = "child", description = "", parents = listOf(parent.id), empty = false)
+            .copy(hasConflict = true)
+        editingSlot(parent, listOf(child)).shouldBeNull()
+    }
+
+    @Test
+    fun `multiple empty slots prefer current working copy`() {
+        val parent = entry()
+        val first = entry(id = "first", description = "", parents = listOf(parent.id))
+        val current = entry(id = "current", description = "", parents = listOf(parent.id), isWorkingCopy = true)
+        editingSlot(parent, listOf(first, current)) shouldBe current
+    }
+
+    @Test
+    fun `multiple empty slots without a current working copy create a fresh slot`() {
+        val parent = entry()
+        val first = entry(id = "first", description = "", parents = listOf(parent.id))
+        val second = entry(id = "second", description = "", parents = listOf(parent.id))
+        editingSlot(parent, listOf(first, second)).shouldBeNull()
     }
 }

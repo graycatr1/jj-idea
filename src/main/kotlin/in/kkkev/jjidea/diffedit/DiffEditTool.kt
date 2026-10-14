@@ -70,16 +70,19 @@ object DiffEditTool {
      * temp-directory lifecycle.
      *
      * @param toolName An ephemeral tool name (e.g. [TOOL_NAME]).
+     * @param preserveParentExecutable Keep existing staged files' executable permissions from
+     *   the parent tree, excluding working-copy chmod edits from a content-only transfer.
      */
     fun <T> withStagingTree(
         perFileContent: Map<String, String?>,
         deletedPaths: Set<String> = emptySet(),
         toolName: String = TOOL_NAME,
+        preserveParentExecutable: Boolean = false,
         run: (configArgs: List<String>, tool: String) -> T
     ): T {
         val stagingDir = buildStagingTree(perFileContent, deletedPaths)
         try {
-            return run(diffEditConfigArgs(toolName, stagingDir), toolName)
+            return run(diffEditConfigArgs(toolName, stagingDir, preserveParentExecutable), toolName)
         } finally {
             stagingDir.toFile().deleteRecursively()
         }
@@ -95,7 +98,11 @@ object DiffEditTool {
      * @param toolName An ephemeral tool name (e.g. `"jj-idea-hunk-apply"`).
      * @param stagingDir Path to the staging directory built by [buildStagingTree].
      */
-    fun diffEditConfigArgs(toolName: String, stagingDir: Path): List<String> {
+    fun diffEditConfigArgs(
+        toolName: String,
+        stagingDir: Path,
+        preserveParentExecutable: Boolean = false
+    ): List<String> {
         val java = discoverJavaExecutable()
         val classpath = discoverClasspath()
         val mainClass = "in.kkkev.jjidea.diffedit.HunkApplyMain"
@@ -104,7 +111,9 @@ object DiffEditTool {
         // jj runs: program edit-args, i.e. `java [edit-args]` — so edit-args must NOT repeat java.
         // jj substitutes $left and $right into edit-args; we capture them as args[1] and args[2].
         // HunkApplyMain signature: <stagingDir> <leftDir> <rightDir>
-        val editArgs = tomlArray(listOf("-cp", classpath, mainClass, stagingPath, "\$left", "\$right"))
+        val args = listOf("-cp", classpath, mainClass, stagingPath, "\$left", "\$right") +
+            if (preserveParentExecutable) listOf("--preserve-parent-executable") else emptyList()
+        val editArgs = tomlArray(args)
 
         return listOf(
             "merge-tools.$toolName.program=$java",

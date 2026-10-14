@@ -1,10 +1,13 @@
 package `in`.kkkev.jjidea.diffedit
 
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermission
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
@@ -28,6 +31,74 @@ class HunkApplyMainTest {
     private fun staging() = tempDir.resolve("staging").also { Files.createDirectories(it) }
     private fun left() = tempDir.resolve("left").also { Files.createDirectories(it) }
     private fun right() = tempDir.resolve("right").also { Files.createDirectories(it) }
+
+    private fun setExecutable(path: Path, executable: Boolean) {
+        assumeTrue(Files.getFileAttributeView(path, PosixFileAttributeView::class.java) != null)
+        val permissions = Files.getPosixFilePermissions(path)
+        val executablePermissions = setOf(
+            PosixFilePermission.OWNER_EXECUTE,
+            PosixFilePermission.GROUP_EXECUTE,
+            PosixFilePermission.OTHERS_EXECUTE
+        )
+        Files.setPosixFilePermissions(
+            path,
+            (permissions - executablePermissions) + if (executable) executablePermissions else emptySet()
+        )
+    }
+
+    @Test
+    fun `content only transfer retains executable parent even when staging and working copy are not executable`() {
+        val staging = staging()
+        val left = left()
+        val right = right()
+        val path = "script.sh"
+        staging.resolve(path).writeText("resolved script")
+        left.resolve(path).writeText("parent script")
+        right.resolve(path).writeText("working script")
+        setExecutable(left.resolve(path), true)
+        setExecutable(staging.resolve(path), false)
+        setExecutable(right.resolve(path), false)
+
+        main(arrayOf(staging.toString(), left.toString(), right.toString(), "--preserve-parent-executable"))
+
+        right.resolve(path).readText() shouldBe "resolved script"
+        Files.isExecutable(right.resolve(path)) shouldBe true
+        Files.isExecutable(left.resolve(path)) shouldBe true
+    }
+
+    @Test
+    fun `content only transfer excludes working copy chmod when parent is not executable`() {
+        val staging = staging()
+        val left = left()
+        val right = right()
+        val path = "script.sh"
+        staging.resolve(path).writeText("resolved script")
+        left.resolve(path).writeText("parent script")
+        right.resolve(path).writeText("working script")
+        setExecutable(left.resolve(path), false)
+        setExecutable(staging.resolve(path), true)
+        setExecutable(right.resolve(path), true)
+
+        mirrorTree(staging, left, right, preserveParentExecutable = true)
+
+        right.resolve(path).readText() shouldBe "resolved script"
+        Files.isExecutable(right.resolve(path)) shouldBe false
+    }
+
+    @Test
+    fun `default staging retains its executable permissions instead of parent permissions`() {
+        val staging = staging()
+        val left = left()
+        val right = right()
+        staging.resolve("script.sh").writeText("resolved script")
+        left.resolve("script.sh").writeText("parent script")
+        setExecutable(left.resolve("script.sh"), true)
+        setExecutable(staging.resolve("script.sh"), false)
+
+        mirrorTree(staging, left, right)
+
+        Files.isExecutable(right.resolve("script.sh")) shouldBe false
+    }
 
     @Test
     fun `mirrorTree copies staging files to right`() {

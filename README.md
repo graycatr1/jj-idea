@@ -4,15 +4,20 @@
 
 This fork installs as **Jujutsu VCS Integration (Local Fork)** with plugin ID
 `in.graycatr1.jj-idea`, separate from the upstream Marketplace plugin. Its Edit action
-continues an unnamed selection directly. Editing a described change asks whether to continue
-the current slot, extend it with a new child, or start a new child of the selected change.
+continues an unnamed selection directly. Editing a described change resumes an empty unnamed
+child when unambiguous, otherwise creates a new child without a confirmation dialog.
 The Working Copy panel also shows cumulative parent-base → current changes when the
 log selects the working copy’s direct parent; its diff has native revert arrows.
 The log details pane keeps the historical diff read-only.
 
+After a three-way merge in an unnamed child of a conflicted change, the result notification
+offers **Return resolution to &lt;change&gt;**. It moves only the merge edits back to the original
+parent, keeps its description, and leaves other edits in the current change. Overlapping prior
+edits require manual hunk selection; changed files or parents invalidate the saved operation.
+
 Build with `./gradlew buildPlugin`. Uninstall the upstream **Jujutsu VCS Integration**
 plugin and restart the IDE, then use **Settings → Plugins → ⚙️ → Install Plugin from Disk**
-to install `build/distributions/jj-idea-local-fork-0.9.1-fork.4.zip` and restart again.
+to install `build/distributions/jj-idea-local-fork-0.9.1-fork.5.zip` and restart again.
 
 For recurring Git index locks and recovery after an interrupted export, see
 [lock diagnostics](docs/index-lock-diagnostics.md).

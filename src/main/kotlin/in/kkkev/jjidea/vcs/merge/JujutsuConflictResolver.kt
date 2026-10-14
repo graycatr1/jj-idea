@@ -3,7 +3,9 @@ package `in`.kkkev.jjidea.vcs.merge
 import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestFactory
 import com.intellij.diff.merge.MergeResult
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vfs.VirtualFile
@@ -12,7 +14,6 @@ import `in`.kkkev.jjidea.diffedit.HunkPicker
 import `in`.kkkev.jjidea.jj.conflict.ConflictInfo
 import `in`.kkkev.jjidea.jj.conflict.ExtractedConflict
 import `in`.kkkev.jjidea.jj.conflict.conflictRegistry
-import java.nio.file.Files
 
 /**
  * Resolves conflicted files one at a time via IntelliJ's three-way merge tool, without ever
@@ -72,12 +73,22 @@ class JujutsuConflictResolver(
         defaultResolveOne(project, file, conflict)
     },
     private val writeResolved: (VirtualFile, ByteArray) -> Unit = { file, bytes ->
-        Files.write(file.toNioPath(), bytes)
+        runWriteAction {
+            val manager = FileDocumentManager.getInstance()
+            val document = manager.getDocument(file)
+            if (document == null) {
+                file.setBinaryContent(bytes)
+            } else {
+                document.setText(bytes.toString(Charsets.UTF_8))
+                manager.saveDocument(document)
+            }
+        }
     },
     private val deleteResolved: (VirtualFile) -> Unit = { file ->
-        Files.deleteIfExists(file.toNioPath())
+        runWriteAction { file.delete(null) }
     },
-    private val conflictInfoFor: (VirtualFile) -> ConflictInfo? = { project.conflictRegistry.get(it) }
+    private val conflictInfoFor: (VirtualFile) -> ConflictInfo? = { project.conflictRegistry.get(it) },
+    private val onResolved: (VirtualFile, ByteArray, Boolean) -> Unit = { _, _, _ -> }
 ) {
     /**
      * Resolves each conflicted file in turn. Stops (leaving any remaining files untouched) as
@@ -98,7 +109,8 @@ class JujutsuConflictResolver(
 
             val resolved = resolveOne(file, conflict) ?: return // Cancelled: stop the queue.
 
-            if (resolved.isEmpty() && conflictInfoFor(file)?.isModifyDelete == true) {
+            val deleted = resolved.isEmpty() && conflictInfoFor(file)?.isModifyDelete == true
+            if (deleted) {
                 deleteResolved(file)
             } else {
                 writeResolved(file, resolved)
@@ -106,6 +118,7 @@ class JujutsuConflictResolver(
             // Marks the file dirty and invalidates the repo so jj re-snapshots and clears the
             // conflict decoration (see JujutsuMergeProvider.refreshResolved).
             mergeProvider.conflictResolvedForFile(file)
+            onResolved(file, resolved, deleted)
         }
     }
 
