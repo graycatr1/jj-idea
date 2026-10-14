@@ -38,12 +38,15 @@ The probes cover `open`/`openat`/`openat2`, `unlink`/`unlinkat`, and
 `rename`/`renameat`/`renameat2` on Linux with the corresponding syscall tracepoints. Kernel timestamps are
 monotonic nanoseconds; `observed_at` is the collector's wall-clock receipt time. Short-lived
 processes may exit before `/proc` metadata can be read; such events are retained with an
-unresolved path. Exec events retain jj/git arguments with bpftrace's length limits. Keep
+unresolved path. Exec events retain jj/git arguments with bpftrace's length limits. Strings are capped at
+128 bytes to keep multi-path syscall probes within the kernel verifier's memory limits;
+long paths may be truncated or missed. Full available command lines are also read from `/proc`. Keep
 unresolved events when interpreting results. The observer also records jj/git launches
 outside the target repository to preserve parent/process context; the log may contain
 command arguments and should be shared only as needed for diagnosis.
 
-If tracing fails, or bpftrace reports dropped events, the run cannot exclude any creator.
+The collector saves verbose kernel/verifier diagnostics to the private log and displays only
+brief startup/error messages in the terminal. If tracing fails, or bpftrace reports dropped events, the run cannot exclude any creator.
 A lock already present at startup has no creation event in this recording. Start before
 reproducing; polling alone cannot recover the creator of an existing stale lock.
 

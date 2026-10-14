@@ -55,11 +55,11 @@ def main():
             log.flush()
 
         write({"event": "START", "target": target, "lock_already_exists": Path(target).exists()})
-        print(f"Watching {target}\nPrivate log: {output}\nUse the IDE normally; press Ctrl+C to stop.", flush=True)
+        print(f"Starting observer for {target}\nPrivate log: {output}\nKeep it running while using the IDE; press Ctrl+C to stop.", flush=True)
         script = Path(__file__).with_name("jj-index-lock.bt")
-        env = dict(os.environ, BPFTRACE_MAX_STRLEN="512")
+        env = dict(os.environ, BPFTRACE_MAX_STRLEN="128")
         process = subprocess.Popen(
-            ["sudo", "-n", "--preserve-env=BPFTRACE_MAX_STRLEN", "bpftrace", "-B", "line", str(script)],
+            ["sudo", "-n", "--preserve-env=BPFTRACE_MAX_STRLEN", "bpftrace", "-v", "-B", "line", str(script)],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
         )
         try:
@@ -67,7 +67,9 @@ def main():
                 fields = line.rstrip("\n").split("\t")
                 if len(fields) < 3 or not fields[2].isdigit():
                     write({"event": "COLLECTOR_MESSAGE", "message": line.rstrip()})
-                    print(line.rstrip(), flush=True)
+                    # Preserve verbose verifier diagnostics in the log without flooding the terminal.
+                    if any(word in line for word in ("ERROR:", "WARNING:", "Attaching", "attached")):
+                        print(line.rstrip(), flush=True)
                     continue
                 event, kernel_ns, pid = fields[:3]
                 pid = int(pid)
@@ -96,7 +98,7 @@ def main():
                     process.wait(timeout=5)
             write({"event": "STOP", "collector_exit_code": process.returncode})
         if process.returncode not in (0, 130, -2):
-            print("Collector failed; see bpftrace errors above. This run does not exclude any lock creator.", file=sys.stderr)
+            print("Collector failed. Full kernel/verifier diagnostics are saved in the private log above. This run does not exclude any lock creator.", file=sys.stderr)
             return 1
     return 0
 
