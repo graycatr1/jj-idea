@@ -15,40 +15,44 @@ that Git HEAD and jj history are consistent.
 
 ## Start the observer before reproducing
 
-On this Linux host, Python 3 and bpftrace 0.25 are already installed. From any terminal:
+On this Linux host, Python 3 and strace are already installed. From a separate terminal:
 
 ```bash
 python3 /home/rl/PycharmProjects/jj-idea/scripts/capture-jj-index-lock.py /home/rl/PycharmProjects/paint-robot
 ```
 
-The script asks for your sudo password: bpftrace needs permission to attach kernel probes.
-Keep this terminal open while using the IDE normally. After the error appears, leave the
-collector running for a few more seconds, then press Ctrl+C. It prints the location of a
-private JSON-lines log under `/tmp`. The script does not change repository content, remove
-locks, run squash, or run snapshotting jj queries.
+The default backend is strace. It asks for your sudo password to attach to existing
+processes, then selects user-owned PyCharm/Java, Codex, Git/jj and terminal shells.
+The collector and its ancestors are excluded. The START record lists every selected PID,
+command and working directory. strace follows their new children and attaches to the
+selected processes' threads. Applications or terminals started later outside these process
+trees are not covered. For a specific existing process, use `--pid PID` (repeatable).
 
-The log contains lock open attempts and their syscall results, unlink/rename attempts and
-results, PID/parent PID, available command lines and working directories, process exit
-status, and `kill` signals directed at tracked processes. A successful open with
-`O_CREAT | O_EXCL` identifies a creator; `OPEN_RESULT` with `-17` (`EEXIST`) identifies a
-process that encountered an existing lock. Successful rename from `index.lock` to `index`
-or unlink is normal lock release. Match syscall entry and result by thread ID, not just PID.
+Wait for `strace attached: recording` before reproducing. Keep the terminal open, use the
+IDE, then press Ctrl+C after the error appears. The tracer detaches; it does not kill the
+traced applications. It prints a private JSON-lines log under `/tmp`. The observer does
+not modify repository content, remove locks, run squash, or run snapshotting jj queries.
+strace can slow down the attached applications; use it for a short reproduction session.
 
-The probes cover `open`/`openat`/`openat2`, `unlink`/`unlinkat`, and
-`rename`/`renameat`/`renameat2` on Linux with the corresponding syscall tracepoints. Kernel timestamps are
-monotonic nanoseconds; `observed_at` is the collector's wall-clock receipt time. Short-lived
-processes may exit before `/proc` metadata can be read; such events are retained with an
-unresolved path. Exec events retain jj/git arguments with bpftrace's length limits. Strings are capped at
-128 bytes to keep multi-path syscall probes within the kernel verifier's memory limits;
-long paths may be truncated or missed. Full available command lines are also read from `/proc`. Keep
-unresolved events when interpreting results. The observer also records jj/git launches
-outside the target repository to preserve parent/process context; the log may contain
-command arguments and should be shared only as needed for diagnosis.
+STRACE records retain timestamped lock syscalls and their return values, exec arguments,
+process creation/exit and signal events, plus available `/proc` metadata. `-yy` annotates
+file descriptors and current-directory references. An open with `O_CREAT | O_EXCL` and a
+non-negative result identifies a creator; `EEXIST` identifies an attempt blocked by an
+existing lock. A successful rename from `index.lock` to `index`, or unlink, releases the
+lock. Preserve unfinished/resumed lines and correlate by PID and timestamp. Short-lived
+processes may exit before `/proc` metadata is available; syscall and exec records remain.
+Other repositories' locks and the selected applications' exec arguments may appear in the
+log. The log can contain command arguments and should only be shared for diagnosis.
 
-The collector saves verbose kernel/verifier diagnostics to the private log and displays only
-brief startup/error messages in the terminal. If tracing fails, or bpftrace reports dropped events, the run cannot exclude any creator.
-A lock already present at startup has no creation event in this recording. Start before
-reproducing; polling alone cannot recover the creator of an existing stale lock.
+The optional `--backend bpftrace` keeps the earlier system-wide BPF observer. It currently
+fails to load probes on this host, so it is not the default. Verbose verifier diagnostics
+are saved to the log; the terminal shows only brief startup/error messages. Its strings
+are capped at 128 bytes; long paths can be truncated or missed.
+
+If attachment fails, events are dropped, or the creator is outside the traced process
+trees, the run cannot exclude that creator. A lock present before startup has no creation
+event in this recording. Start the applications/terminals first, then the observer, before
+reproducing; polling cannot recover the creator of a stale lock.
 
 ## Inspect an incident without triggering another import
 
