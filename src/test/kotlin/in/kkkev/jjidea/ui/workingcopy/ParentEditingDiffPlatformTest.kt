@@ -7,11 +7,14 @@ import com.intellij.diff.tools.simple.SimpleDiffViewer
 import com.intellij.diff.util.DiffUtil
 import com.intellij.diff.util.Side
 import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.testFramework.junit5.RunInEdt
 import com.intellij.testFramework.junit5.TestApplication
 import com.intellij.testFramework.junit5.fixture.projectFixture
@@ -27,12 +30,68 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 
 @Tag("platform")
 @TestApplication
 @RunInEdt
 class ParentEditingDiffPlatformTest {
     private val project = projectFixture()
+
+    @TempDir
+    lateinit var directory: Path
+
+    @Test
+    fun `parent diff changes save the live file without a manual save`() {
+        val path = directory.resolve("parent.txt")
+        Files.writeString(path, "parent edit\n")
+        WriteIntentReadAction.run {
+            val file = requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path))
+            val manager = FileDocumentManager.getInstance()
+            val document = requireNotNull(manager.getDocument(file))
+            val repo = mockk<JujutsuRepository>()
+            val parent = LogEntry(repo, ChangeId("parent"), CommitId("parent-tree"), "Parent")
+            val slot = LogEntry(repo, ChangeId("slot"), CommitId("slot-tree"), "", parentIds = listOf(parent.id))
+            val owner = Disposer.newDisposable()
+            try {
+                val queue = installParentDiffSave(ParentEditingSession(slot, parent), document, owner)
+                com.intellij.openapi.application.runWriteAction { document.setText("reverted\n") }
+                manager.isDocumentUnsaved(document) shouldBe true
+                queue.flush()
+
+                Files.readString(path) shouldBe "reverted\n"
+                manager.isDocumentUnsaved(document) shouldBe false
+            } finally {
+                Disposer.dispose(owner)
+            }
+        }
+    }
+
+    @Test
+    fun `invalidated and disposed parent diffs cannot save queued edits`() {
+        WriteIntentReadAction.run {
+            val repo = mockk<JujutsuRepository>()
+            val parent = LogEntry(repo, ChangeId("parent"), CommitId("parent-tree"), "Parent")
+            val slot = LogEntry(repo, ChangeId("slot"), CommitId("slot-tree"), "", parentIds = listOf(parent.id))
+            val session = ParentEditingSession(slot, parent)
+            val document = EditorFactory.getInstance().createDocument("before")
+            val owner = Disposer.newDisposable()
+            var saves = 0
+            val queue = installParentDiffSave(session, document, owner) { saves++ }
+            try {
+                com.intellij.openapi.application.runWriteAction { document.setText("pending") }
+                session.invalidate()
+                queue.flush()
+                saves shouldBe 0
+            } finally {
+                Disposer.dispose(owner)
+            }
+            com.intellij.openapi.application.runWriteAction { document.setText("after disposal") }
+            saves shouldBe 0
+        }
+    }
 
     @Test
     fun `clearing or multi selecting log rows revokes the previous editing session`() {

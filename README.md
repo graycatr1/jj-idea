@@ -8,6 +8,7 @@ continues an unnamed selection directly. Editing a described change resumes an e
 child when unambiguous, otherwise creates a new child without a confirmation dialog.
 The Working Copy panel also shows cumulative parent-base → current changes when the
 log selects the working copy’s direct parent; its diff has native revert arrows.
+Edits in cumulative parent diffs are saved automatically so both file lists refresh without Ctrl+S.
 The log details pane keeps the historical diff read-only.
 
 After a three-way merge in an unnamed child of a conflicted change, the result notification
@@ -17,7 +18,7 @@ edits require manual hunk selection; changed files or parents invalidate the sav
 
 Build with `./gradlew buildPlugin`. Uninstall the upstream **Jujutsu VCS Integration**
 plugin and restart the IDE, then use **Settings → Plugins → ⚙️ → Install Plugin from Disk**
-to install `build/distributions/jj-idea-local-fork-0.9.1-fork.5.zip` and restart again.
+to install `build/distributions/jj-idea-local-fork-0.9.1-fork.6.zip` and restart again.
 
 For recurring Git index locks and recovery after an interrupted export, see
 [lock diagnostics](docs/index-lock-diagnostics.md).

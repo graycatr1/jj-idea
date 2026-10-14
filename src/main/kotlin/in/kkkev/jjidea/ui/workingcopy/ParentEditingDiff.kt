@@ -8,6 +8,11 @@ import com.intellij.diff.chains.DiffRequestProducerException
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -19,6 +24,8 @@ import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.changes.actions.diff.ChangeDiffRequestProducer
 import com.intellij.openapi.vcs.changes.actions.diff.ChangeDiffRequestProvider
 import com.intellij.util.ThreeState
+import com.intellij.util.ui.update.MergingUpdateQueue
+import com.intellij.util.ui.update.Update
 import `in`.kkkev.jjidea.JujutsuBundle
 import `in`.kkkev.jjidea.jj.LogEntry
 
@@ -108,10 +115,39 @@ class ParentEditingDiffExtension : DiffExtension() {
     override fun onViewerCreated(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
         val session = request.getUserData(ParentEditingSession.KEY) ?: return
         if (viewer !is TwosideTextDiffViewer) return
+        val saves = installParentDiffSave(session, viewer.editor2.document, viewer)
         val disconnect = session.onInvalidated {
+            saves.cancelAllUpdates()
             viewer.editors.forEach { it.setViewer(true) }
             viewer.rediff()
         }
         Disposer.register(viewer) { disconnect() }
     }
+}
+
+/** JJ lists read disk, so cumulative-diff edits must be saved before VFS can refresh the lists. */
+internal fun installParentDiffSave(
+    session: ParentEditingSession,
+    document: Document,
+    owner: Disposable,
+    save: (Document) -> Unit = { document ->
+        val manager = FileDocumentManager.getInstance()
+        if (manager.getFile(document) != null) manager.saveDocument(document)
+    }
+): MergingUpdateQueue {
+    val queue = MergingUpdateQueue("jjParentDiffSave", 200, true, null, owner)
+    document.addDocumentListener(
+        object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                if (!session.active) return
+                queue.queue(object : Update("save") {
+                    override fun run() {
+                        if (session.active) save(document)
+                    }
+                })
+            }
+        },
+        owner
+    )
+    return queue
 }
